@@ -1,6 +1,39 @@
-@ExpenseTracker.Api_HostAddress = http://localhost:5231
+@ExpenseTrackerApi_HostAddress = https://localhost:7120
+@ItemId = 1
 
-GET {{ExpenseTracker.Api_HostAddress}}/weatherforecast/
+### Get all items
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/items
 Accept: application/json
 
-###
+### Create item
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Bond Paper",
+  "code": "BP-A5",
+  "brand": "PaperOne",
+  "unitPrice": 250.00
+}
+
+### Get item by ID
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{ItemId}}
+Accept: application/json
+
+### Update item price
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{ItemId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "unitPrice": 275.00
+}
+
+### Delete item
+
+DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{ItemId}}

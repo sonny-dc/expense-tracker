@@ -16,6 +16,7 @@ public static class DatabaseServiceExtensions
             new SqlConnectionFactory(connectionString));
 
         services.AddScoped<UnitOfWork>();
+        services.AddScoped<DatabaseExecutor>();
         services.AddScoped<TransactionManager>();
 
         return services;

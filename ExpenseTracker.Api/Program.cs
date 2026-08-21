@@ -1,3 +1,9 @@
+using System.Text.Json.Serialization;
+
+using ExpenseTracker.Api.Features.Items;
+using ExpenseTracker.Api.Infrastructure.Routing;
+using ExpenseTracker.Api.Infrastructure.Database;
+using ExpenseTracker.Api.Infrastructure.Errors;
 
 namespace ExpenseTracker.Api
 {
@@ -8,12 +14,25 @@ namespace ExpenseTracker.Api
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
+            
+            builder.Services.AddControllers()
+                            .AddJsonOptions(options =>
+                            {
+                                options.JsonSerializerOptions.UnmappedMemberHandling =
+                                    JsonUnmappedMemberHandling.Disallow;
+                            });
+                            
+            
+            builder.Services.AddProblemDetails();
+            builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
-            builder.Services.AddControllers();
-            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
+            builder.Services.AddDatabase(builder.Configuration);
+            builder.Services.AddItems();
 
             var app = builder.Build();
+
+            app.UseExceptionHandler();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -25,8 +44,8 @@ namespace ExpenseTracker.Api
 
             app.UseAuthorization();
 
-
-            app.MapControllers();
+            RouteGroupBuilder api = app.MapGroup(AppRoutes.Api);
+            api.MapControllers();
 
             app.Run();
         }

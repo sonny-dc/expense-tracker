@@ -166,14 +166,14 @@ public sealed class ItemRepository
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-                UPDATE dbo.Items
-                SET
-                    Name = @Name,
-                    Code = @Code,
-                    Brand = @Brand,
-                    UnitPrice = @UnitPrice
-                WHERE ItemId = @ItemId;
-            """;
+            UPDATE dbo.Items
+            SET
+                Name = COALESCE(@Name, Name),
+                Code = COALESCE(@Code, Code),
+                Brand = COALESCE(@Brand, Brand),
+                UnitPrice = COALESCE(@UnitPrice, UnitPrice)
+            WHERE ItemId = @ItemId;
+        """;
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {

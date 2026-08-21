@@ -29,8 +29,7 @@ public sealed class UnitOfWork : IAsyncDisposable
     public bool HasActiveTransaction => _transaction is not null;
 
     public async Task BeginAsync(
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         if (_connection is not null || _transaction is not null)
         {
@@ -56,8 +55,7 @@ public sealed class UnitOfWork : IAsyncDisposable
     }
 
     public async Task CommitAsync(
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         SqlTransaction transaction = Transaction;
         try
@@ -71,8 +69,7 @@ public sealed class UnitOfWork : IAsyncDisposable
     }
 
     public async Task RollbackAsync(
-        CancellationToken cancellationToken = default
-    )
+        CancellationToken cancellationToken = default)
     {
         SqlTransaction transaction = Transaction;
         try

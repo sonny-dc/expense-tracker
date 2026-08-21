@@ -2,11 +2,11 @@ namespace ExpenseTracker.Api.Features.Items;
 
 public sealed class UpdateItemRequest
 {
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
 
-    public string Code { get; set; } = string.Empty;
+    public string? Code { get; set; }
 
-    public string Brand { get; set; } = string.Empty;
+    public string? Brand { get; set; }
 
-    public decimal UnitPrice { get; set; }
+    public decimal? UnitPrice { get; set; }
 }
