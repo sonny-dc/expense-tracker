@@ -1,4 +1,5 @@
 <Solution>
+  <Project Path="ExpenseTracker.Api.Tests/ExpenseTracker.Api.Tests.csproj" Id="8df57dbb-eef3-4165-bafc-a58dd080a106" />
   <Project Path="ExpenseTracker.Api/ExpenseTracker.Api.csproj" />
   <Project Path="ExpenseTracker.Database/ExpenseTracker.Database.sqlproj" Id="d8c1932e-2fe3-4988-90be-d0a8c9acd2c4">
     <Build />

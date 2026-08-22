@@ -17,7 +17,7 @@ public class CreateItemRequestValidator
 
         RuleFor(request => request.Brand)
             .NotEmpty()
-            .MaximumLength(50);
+            .MaximumLength(100);
 
         RuleFor(request => request.UnitPrice)
             .GreaterThanOrEqualTo(0);
