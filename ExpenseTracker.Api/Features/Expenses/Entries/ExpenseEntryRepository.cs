@@ -40,7 +40,6 @@ public sealed class ExpenseEntryRepository
         int expenseEntryId,
         CancellationToken cancellationToken = default)
     {
-        
         const string sql = """
             SELECT
                 ExpenseEntryId,

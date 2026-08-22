@@ -1,10 +1,9 @@
 namespace ExpenseTracker.Api.Features.Expenses.Items;
 
-public sealed class ExpenseItem
+public sealed class CreateExpenseItemInput
 {
-    public int ExpenseItemId { get; set; }
     public int ExpenseEntryId { get; set; }
-    public int? ItemId { get; set; }
+    public int ItemId { get; set; }
     public string ItemNameSnapshot { get; set; } = string.Empty;
     public string ItemCodeSnapshot { get; set; } = string.Empty;
     public string BrandSnapshot { get; set; } = string.Empty;
