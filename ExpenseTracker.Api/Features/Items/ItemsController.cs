@@ -6,15 +6,15 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExpenseTracker.Api.Features.Items;
 
 [ApiController]
-[Route(ItemRoutes.Base)]
-public sealed class ItemController : ControllerBase
+[Route("[controller]")]
+public sealed class ItemsController : ControllerBase
 {
     private readonly ItemService _itemService;
 
     private readonly IValidator<CreateItemRequest> _createItemRequestValidator;
     private readonly IValidator<UpdateItemRequest> _updateItemRequestValidator;
 
-    public ItemController(
+    public ItemsController(
         ItemService itemService,
         IValidator<CreateItemRequest> createItemRequestValidator,
         IValidator<UpdateItemRequest> updateItemRequestValidator)
@@ -34,7 +34,7 @@ public sealed class ItemController : ControllerBase
         return Ok(items);
     }
 
-    [HttpGet(ItemRoutes.ById)]
+    [HttpGet("{itemId:int}")]
     public async Task<ActionResult<Item>> GetByIdAsync(
         [FromRoute] int itemId,
         CancellationToken cancellationToken)
@@ -70,7 +70,7 @@ public sealed class ItemController : ControllerBase
             createdItem);
     }
 
-    [HttpPatch(ItemRoutes.ById)]
+    [HttpPatch("{itemId:int}")]
     public async Task<ActionResult<Item>> UpdateAsync(
         [FromRoute] int itemId,
         [FromBody] UpdateItemRequest request,
@@ -94,7 +94,7 @@ public sealed class ItemController : ControllerBase
         return Ok(updatedItem);
     }
 
-    [HttpDelete(ItemRoutes.ById)]
+    [HttpDelete("{itemId:int}")]
     public async Task<IActionResult> DeleteAsync(
         [FromRoute] int itemId,
         CancellationToken cancellationToken)
