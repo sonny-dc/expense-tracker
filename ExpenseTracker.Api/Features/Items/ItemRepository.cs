@@ -15,15 +15,16 @@ public sealed class ItemRepository
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-                SELECT 
-                    ItemId,
-                    Name,
-                    Code,
-                    Brand,
-                    UnitPrice
-                FROM dbo.Items
-                ORDER BY Name, ItemId;
-            """;
+            SELECT 
+                ItemId,
+                Name,
+                Code,
+                Brand,
+                UnitPrice
+            FROM dbo.Items
+            ORDER BY Name, ItemId;
+        """;
+        
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -42,15 +43,16 @@ public sealed class ItemRepository
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-                SELECT 
-                    ItemId,
-                    Name,
-                    Code,
-                    Brand,
-                    UnitPrice
-                FROM dbo.Items
-                WHERE ItemId = @ItemId;
-            """;
+            SELECT 
+                ItemId,
+                Name,
+                Code,
+                Brand,
+                UnitPrice
+            FROM dbo.Items
+            WHERE ItemId = @ItemId;
+        """;
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -64,32 +66,62 @@ public sealed class ItemRepository
         );
     }
 
+    public async Task<IReadOnlyList<Item>> GetByIdsAsync(
+        IReadOnlyCollection<int> itemIds,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT
+                ItemId,
+                Name,
+                Code,
+                Brand,
+                UnitPrice
+            FROM dbo.Items
+            WHERE ItemId IN @ItemIds;
+        """;
+
+        return await _databaseExecutor.ExecuteAsync(
+            async (connection, transaction) =>
+            {
+                var command = new CommandDefinition(
+                    commandText: sql,
+                    parameters: new { ItemIds = itemIds },
+                    transaction: transaction,
+                    cancellationToken: cancellationToken);
+                IEnumerable<Item> items = await connection.QueryAsync<Item>(command);
+                return items.AsList();
+            }
+        );
+    }
+
     public async Task<Item> CreateAsync(
         CreateItemRequest request,
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-                INSERT INTO dbo.Items
-                (
-                    Name,
-                    Code,
-                    Brand,
-                    UnitPrice
-                )
-                OUTPUT
-                    INSERTED.ItemId,
-                    INSERTED.Name,
-                    INSERTED.Code,
-                    INSERTED.Brand,
-                    INSERTED.UnitPrice
-                VALUES
-                (
-                    @Name,
-                    @Code,
-                    @Brand,
-                    @UnitPrice
-                );
-            """;
+            INSERT INTO dbo.Items
+            (
+                Name,
+                Code,
+                Brand,
+                UnitPrice
+            )
+            OUTPUT
+                INSERTED.ItemId,
+                INSERTED.Name,
+                INSERTED.Code,
+                INSERTED.Brand,
+                INSERTED.UnitPrice
+            VALUES
+            (
+                @Name,
+                @Code,
+                @Brand,
+                @UnitPrice
+            );
+        """;
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -118,26 +150,26 @@ public sealed class ItemRepository
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-                SELECT CAST(
-                    CASE
-                        WHEN EXISTS
-                        (
-                            SELECT 1
-                            FROM dbo.Items
-                            WHERE Name = @Name
-                                AND Code = @Code
-                                AND Brand = @Brand
-                                AND (
-                                    @ExcludedItemId IS NULL
-                                    OR ItemId <> @ExcludedItemId
-                                )
-                        )
-                        THEN 1
-                        ELSE 0
-                    END
-                    AS BIT
-                );
-            """;
+            SELECT CAST(
+                CASE
+                    WHEN EXISTS
+                    (
+                        SELECT 1
+                        FROM dbo.Items
+                        WHERE Name = @Name
+                            AND Code = @Code
+                            AND Brand = @Brand
+                            AND (
+                                @ExcludedItemId IS NULL
+                                OR ItemId <> @ExcludedItemId
+                            )
+                    )
+                    THEN 1
+                    ELSE 0
+                END
+                AS BIT
+            );
+        """;
 
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
@@ -174,6 +206,7 @@ public sealed class ItemRepository
                 UnitPrice = COALESCE(@UnitPrice, UnitPrice)
             WHERE ItemId = @ItemId;
         """;
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -203,9 +236,10 @@ public sealed class ItemRepository
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-                DELETE FROM dbo.Items
-                WHERE ItemId = @ItemId;
-            """;
+            DELETE FROM dbo.Items
+            WHERE ItemId = @ItemId;
+        """;
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {

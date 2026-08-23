@@ -31,6 +31,29 @@ public class ItemService
         return item;
     }
 
+    public async Task<IReadOnlyList<Item>> GetByIdsAsync(
+        IReadOnlyCollection<int> itemIds,
+        CancellationToken cancellationToken = default)
+    {
+        int[] distinctItemIds = itemIds.Distinct().ToArray();
+
+        if (distinctItemIds.Length == 0)
+        {
+            return [];
+        }
+
+        IReadOnlyList<Item> items = await _itemRepository.GetByIdsAsync(
+            distinctItemIds,
+            cancellationToken);
+
+        if (items.Count != distinctItemIds.Length)
+        {
+            throw new ItemNotFoundException("One or more items were not found.");
+        }
+
+        return items;
+    }
+
     public async Task<Item> CreateAsync(
         CreateItemRequest request,
         CancellationToken cancellationToken = default)
