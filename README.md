@@ -1,127 +1,128 @@
 # ExpenseTracker
 
-ExpenseTracker is a small, local expense-recording system built around an ASP.NET Core Web API and a local Microsoft SQL Server database, with a Windows Forms graphical client planned as its desktop interface.
+ExpenseTracker is a small local expense-recording application built with an ASP.NET Core Web API, SQL Server LocalDB, and a planned Windows Forms desktop client.
 
-The project is intended as a focused C# application that demonstrates how a desktop client, HTTP API, data-access layer, and relational database can work together in a single local solution.
+The backend is complete for the current Item and Expense scope. Development is now moving to the Windows Forms client, which will communicate with the API instead of connecting directly to the database.
 
 ## Features
 
-- Manage reusable items with a name, code, brand, and unit price
-- Retrieve, create, partially update, and delete items through versioned API endpoints
-- Prevent duplicate items based on the combination of name, code, and brand
-- Validate item requests and reject unknown JSON properties
-- Return standardized API error responses for known and unexpected failures
+- Create, retrieve, partially update, and delete reusable items
+- Prevent duplicate items by name, code, and brand
 - Record expenses containing one or more item lines
-- Store the expense date, total cost, optional notes, and creation time
-- Preserve item details as historical snapshots in recorded expenses
-- Retain expense history when an item is deleted
-- Access application operations through a C# Web API
-- Provide a Windows Forms desktop interface for local interaction
+- Combine repeated item IDs into one expense line with a normalized quantity
+- Calculate line totals and expense totals on the backend
+- Preserve item names, codes, brands, and unit prices as historical snapshots
+- Retain expense history when a source item is deleted
+- Validate requests with FluentValidation
+- Reject unknown JSON properties
+- Return standardized `ProblemDetails` error responses
+- Execute expense creation inside a database transaction
+- Retrieve complete expenses without repetitive per-entry database queries
 
-## Application Structure
+## Technology Stack
 
-ExpenseTracker is divided into three main parts:
+- C# and .NET 10
+- ASP.NET Core Web API
+- Windows Forms, planned client
+- FluentValidation
+- Dapper
+- Microsoft SQL Server LocalDB
+- SQL Server Database Project
+- xUnit v3
 
-### Windows Forms Client
+## Solution Structure
 
-The planned Windows Forms application will provide the graphical user interface. It will communicate with the Web API instead of connecting directly to the database.
+```text
+ExpenseTracker.slnx
+├── ExpenseTracker.Api/
+│   ├── Features/
+│   │   ├── Items/
+│   │   │   ├── Exceptions/
+│   │   │   ├── Requests/
+│   │   │   ├── Validators/
+│   │   │   ├── Item.cs
+│   │   │   ├── ItemRepository.cs
+│   │   │   ├── ItemService.cs
+│   │   │   ├── ItemServiceExtensions.cs
+│   │   │   └── ItemsController.cs
+│   │   └── Expenses/
+│   │       ├── Entries/
+│   │       │   ├── Exceptions/
+│   │       │   ├── ExpenseEntry.cs
+│   │       │   ├── ExpenseEntryRepository.cs
+│   │       │   └── ExpenseEntryService.cs
+│   │       ├── Items/
+│   │       │   ├── Exceptions/
+│   │       │   ├── Requests/
+│   │       │   ├── ExpenseItem.cs
+│   │       │   ├── ExpenseItemRepository.cs
+│   │       │   └── ExpenseItemService.cs
+│   │       ├── Requests/
+│   │       ├── Validators/
+│   │       ├── ExpenseResult.cs
+│   │       ├── ExpenseService.cs
+│   │       ├── ExpenseServiceExtensions.cs
+│   │       └── ExpensesController.cs
+│   ├── Infrastructure/
+│   │   ├── Database/
+│   │   ├── Errors/
+│   │   └── Routing/
+│   ├── ExpenseTracker.Api.http
+│   └── Program.cs
+├── ExpenseTracker.Api.Tests/
+│   ├── Features/
+│   │   ├── Items/
+│   │   │   ├── Api/
+│   │   │   └── Validators/
+│   │   └── Expenses/
+│   │       ├── Api/
+│   │       ├── Helpers/
+│   │       └── Validators/
+│   └── Infrastructure/
+└── ExpenseTracker.Database/
+    └── Tables/
+        ├── Items.sql
+        ├── ExpenseEntries.sql
+        └── ExpenseItems.sql
+```
 
-This separation will keep the desktop interface focused on presentation and user interaction while the API owns application behavior and data access.
+### Feature ownership
 
-### ASP.NET Core Web API
+The API uses a feature-first structure. Business areas are placed under `Features`, while shared technical infrastructure is placed under `Infrastructure`.
 
-The Web API is the application layer between the Windows Forms client and SQL Server. It is responsible for receiving requests, validating input, applying application rules, coordinating database operations, and returning JSON responses.
+`Features/Expenses` is the parent Expense feature. Its nested folders have different responsibilities:
 
-The API uses a feature-first structure, with application features placed under `Features` and shared database, routing, and error-handling infrastructure placed under `Infrastructure`.
+- `Entries` owns persisted expense-entry data and behavior.
+- `Items` owns the historical item lines belonging to an expense.
+- `Requests` contains request contracts owned by the parent Expense operation.
+- `Validators` contains validation rules for those parent request contracts.
+- `ExpenseService` coordinates item lookup, total calculation, snapshot preparation, and transactional persistence.
 
-API controllers are grouped under the versioned base route:
+`Requests`, `Validators`, and `Exceptions` are technical-role folders, not separate business features. Their location communicates ownership. For example:
+
+```text
+Features/Expenses/Validators/CreateExpenseRequestValidator.cs
+```
+
+means that the validator belongs to the parent Expense feature, while:
+
+```text
+Features/Expenses/Items/Requests/CreateExpenseItemRequest.cs
+```
+
+means that the nested request model belongs to the Expense Items area.
+
+No additional `Features` or `Subfeatures` folder is needed inside `Expenses`. The existing folder hierarchy already expresses the parent and child relationship without adding repetitive namespaces.
+
+## API Endpoints
+
+All controllers are mapped under the versioned base route:
 
 ```text
 /api/v1
 ```
 
-The completed Item endpoints are available under:
-
-```text
-/api/v1/items
-```
-
-The API uses explicit route and body binding attributes in controller actions for readability. Request cancellation tokens are propagated from the HTTP request through the controller, service, repository, and Dapper command execution flow.
-
-### SQL Server Database
-
-The application uses Microsoft SQL Server LocalDB through the following local server instance:
-
-```text
-(localdb)\MSSQLLocalDB
-```
-
-The database is named:
-
-```text
-ExpenseTracker
-```
-
-The schema is maintained through a SQL Server Database Project.
-
-## Technology Stack
-
-- C#
-- .NET 10
-- ASP.NET Core Web API
-- Windows Forms
-- FluentValidation
-- Dapper
-- Microsoft SQL Server LocalDB
-- SQL Server Database Project
-
-## Database Design
-
-The database currently contains three main tables:
-
-### `Items`
-
-Stores reusable item information:
-
-- Item name
-- Item code
-- Brand
-- Unit price
-
-An item is uniquely identified by the combination of its name, code, and brand. Unit prices cannot be negative.
-
-### `ExpenseEntries`
-
-Stores the main information for each recorded expense:
-
-- Expense date
-- Total cost
-- Optional notes
-- Creation timestamp
-
-Each expense entry can contain multiple expense items.
-
-### `ExpenseItems`
-
-Stores the individual item lines belonging to an expense entry:
-
-- Referenced item, when still available
-- Item name snapshot
-- Item code snapshot
-- Brand snapshot
-- Quantity
-- Unit cost snapshot
-- Line total
-
-Snapshot fields preserve the original item details at the time the expense was recorded. If an item is later changed or deleted, the historical expense information remains intact.
-
-Deleting an expense entry also deletes its associated expense item lines. Deleting an item does not delete historical expense lines. Instead, their item reference becomes null while their snapshots remain available.
-
-## Item API
-
-The Item feature is implemented across controller, service, repository, validation, and exception layers.
-
-Supported operations include:
+### Items
 
 ```text
 GET     /api/v1/items
@@ -131,122 +132,90 @@ PATCH   /api/v1/items/{itemId}
 DELETE  /api/v1/items/{itemId}
 ```
 
-Item creation returns `201 Created`, includes the created item in the response body, and provides a `Location` header containing the new item URL.
-
-Item updates use `PATCH` and support partial request bodies. Nullable properties in `UpdateItemRequest` represent omitted fields, while the repository uses SQL `COALESCE` expressions to preserve existing values that were not supplied.
-
-The service retrieves the current item before an update so it can calculate the effective name, code, and brand used for composite duplicate checking. The current item ID is excluded from that check so an unchanged item does not conflict with itself.
-
-Successful deletion returns `204 No Content`. Historical expense item records remain valid because their item reference is set to null while stored snapshot values are preserved.
-
-## Request Validation and JSON Contracts
-
-The Item feature uses FluentValidation for strongly typed request validation.
-
-Validation rules cover:
-
-- Required item fields during creation
-- Maximum lengths matching the database schema
-- Nonnegative unit prices
-- Partial item updates
-- Rejection of an empty update request
-- Validation only of fields supplied in a PATCH request
-
-Validators are registered through assembly scanning from the Item feature service-collection extension. Controllers receive the appropriate validator through `IValidator<TRequest>` dependency injection and validate requests before calling the service layer.
-
-Unknown JSON properties are rejected globally through:
+### Expenses
 
 ```text
-JsonUnmappedMemberHandling.Disallow
+GET     /api/v1/expenses
+GET     /api/v1/expenses/{expenseEntryId}
+POST    /api/v1/expenses
 ```
 
-This prevents misspelled or unsupported request properties from being silently ignored.
+The client supplies item IDs, quantities, and optional notes when creating an expense. The backend owns the expense timestamp, item snapshots, line totals, and overall total.
 
-## Error Handling
+## Database Design
 
-The API uses a centralized global exception handler implemented through ASP.NET Core's `IExceptionHandler` contract.
+The application uses the LocalDB instance:
 
-Known API failures inherit from an abstract `ApiException`, which carries a client-safe status code and title. Feature-specific exceptions currently include:
+```text
+(localdb)\MSSQLLocalDB
+```
 
-- `ItemNotFoundException`, returned as `404 Not Found`
-- `DuplicateItemException`, returned as `409 Conflict`
+The main database is named `ExpenseTracker`. Automated integration tests use the isolated `ExpenseTracker.Tests` database.
 
-The global handler converts known exceptions into structured `ProblemDetails` responses. Each error response includes:
+The schema is maintained by `ExpenseTracker.Database` and contains:
 
-- Error title
-- HTTP status code
-- Safe error detail
-- Request path
-- Trace identifier
+- `Items`, reusable item definitions with a composite uniqueness rule on name, code, and brand
+- `ExpenseEntries`, parent expense records with a SQL-generated UTC timestamp and backend-calculated total
+- `ExpenseItems`, historical expense lines containing item snapshots, quantity, unit-price snapshot, and line total
 
-Unexpected exceptions are logged through `ILogger<GlobalExceptionHandler>` with the request method, path, exception details, and trace identifier. Clients receive a generic `500 Internal Server Error` response without internal stack traces, SQL details, file paths, or other implementation information.
+Deleting an expense entry cascades to its expense items. Deleting a source item sets the historical `ExpenseItems.ItemId` reference to `null` while preserving its snapshot values.
 
-This design allows new feature exceptions to inherit from `ApiException` without requiring the global handler to contain a growing list of feature-specific exception mappings.
+## Backend Design
 
-## Data Access and Transactions
-
-The API uses Dapper for explicit SQL-based data access.
+Controllers validate HTTP requests and delegate application behavior to feature services. Repositories own Dapper SQL and use `DatabaseExecutor` for connection and transaction reuse.
 
 Database infrastructure includes:
 
-- `SqlConnectionFactory` for creating SQL Server connections
-- `DatabaseExecutor` for executing repository operations
-- `UnitOfWork` for owning an active connection and transaction
-- `TransactionManager` for coordinating commit and rollback behavior
+- `SqlConnectionFactory`, creates SQL Server connections
+- `DatabaseExecutor`, executes repository operations using either a temporary connection or the active transaction
+- `UnitOfWork`, owns the scoped connection and transaction
+- `TransactionManager`, coordinates commit and rollback behavior
 
-Repository operations can run independently with a temporary connection or reuse the active scoped connection and transaction when participating in a larger transactional workflow.
+Expense creation runs as one transaction. `ExpenseService` normalizes repeated item IDs, retrieves source items in one batch, calculates totals, creates the parent expense entry, and creates its historical item lines.
 
-The current Item operations do not start explicit transactions because each mutation contains a single database write. The transaction infrastructure is intended for multi-write workflows such as creating an expense entry together with all of its expense item lines.
+Retrieving all expenses also uses batch retrieval. The API loads all matching expense items in one query, groups them by `ExpenseEntryId`, and assembles complete results in memory. This avoids the N+1 query pattern.
 
-## API Testing
+## Validation and Error Handling
 
-The Item API has been manually tested without a frontend through a committed `.http` request file using the REST Client extension in Visual Studio Code.
+FluentValidation rules cover Item creation, partial Item updates, and Expense creation. Unknown JSON properties are rejected globally through `JsonUnmappedMemberHandling.Disallow`.
 
-Verified scenarios include:
+Known application failures inherit from `ApiException` and are converted into client-safe `ProblemDetails` responses by `GlobalExceptionHandler`. Unexpected errors are logged and returned as generic `500 Internal Server Error` responses without exposing internal details.
 
-- Retrieving all items
-- Creating an item
-- Retrieving an item by ID
-- Partially updating an item
-- Deleting an item
-- Rejecting invalid request values
-- Rejecting unknown JSON properties
-- Returning `409 Conflict` for duplicate items
-- Returning `404 Not Found` for missing items
-- Returning a valid `Location` header after creation
+## Running the API in Visual Studio
 
-The `.http` file serves as executable API documentation and a repeatable manual test collection while the Windows Forms client is still under development.
+1. Open `ExpenseTracker.slnx` in Visual Studio.
+2. Ensure `ExpenseTracker.Api` is selected as the startup project.
+3. Ensure the current database project has been published to the `ExpenseTracker` LocalDB database.
+4. Run the API using the **https** launch profile or press **F5**.
+5. Use `ExpenseTracker.Api/ExpenseTracker.Api.http` to send manual requests to the running API.
 
-## Current Development Status
+The HTTPS launch profile uses:
 
-The following areas are currently established:
+```text
+https://localhost:7120
+```
 
-- SQL Server database schema for items and expenses
-- LocalDB connection infrastructure
-- Unit-of-work and transaction handling
-- Shared database executor
-- Versioned API routing under `/api/v1`
-- Strict JSON request contracts
-- FluentValidation request validators
-- Scalable global exception handling with `ProblemDetails`
-- Item models and request models
-- Item repository operations for retrieval, creation, duplicate checking, partial updating, and deletion
-- Item service rules for retrieval, duplicate detection, partial updates, creation, and deletion
-- Item controller endpoints for complete CRUD interaction
-- Successful manual Item API testing through a `.http` file
+## Running Tests in Visual Studio
 
-The next planned development area is the expense feature, including coordinated creation of an expense entry and its associated expense item lines within a transaction. The Windows Forms client will then consume the completed API workflows.
+The automated suite contains validator unit tests and API integration tests. API tests run against the isolated `ExpenseTracker.Tests` LocalDB database through `CustomWebApplicationFactory`.
 
-## Project Scope
+Before running integration tests, publish the current database project to `ExpenseTracker.Tests` so its schema matches the application database.
 
-ExpenseTracker is intentionally a small, local application.
+To run the tests:
 
-It is not currently designed as:
+1. Open **Test > Test Explorer** in Visual Studio.
+2. Build the solution if the tests have not appeared.
+3. Select **Run All Tests**.
+4. Review failures and output through Test Explorer.
 
-- A cloud-hosted service
-- A multi-tenant system
-- A public web application
-- A distributed database application
-- A replacement for full accounting software
+The test suite covers Item CRUD behavior, request validation, Expense creation and retrieval, backend calculations, duplicate item normalization, SQL-generated timestamps, historical snapshots, missing-resource responses, strict JSON contracts, and source-item deletion behavior.
 
-Its purpose is to provide a practical local expense-recording workflow while serving as a focused C# learning project involving desktop development, API design, request validation, error handling, Dapper, transactions, and relational database modeling.
+## Current Status
+
+The backend, database schema, manual HTTP requests, validator tests, and API integration tests are complete for the current project scope. All current Item and Expense tests pass against the isolated test database.
+
+Development is now moving to the Windows Forms client. The desktop application will consume the existing API for item management, expense recording, and expense history while leaving validation, calculations, transactions, snapshots, and persistence under backend ownership.
+
+## Scope
+
+ExpenseTracker is intentionally a small local learning project. It is not intended to be a cloud-hosted, multi-tenant, or full accounting system.
