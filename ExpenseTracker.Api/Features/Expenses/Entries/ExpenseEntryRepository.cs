@@ -17,6 +17,7 @@ public sealed class ExpenseEntryRepository
         const string sql = """
             SELECT
                 ExpenseEntryId,
+                Title,
                 ExpenseDateTime,
                 TotalCost,
                 Notes
@@ -44,6 +45,7 @@ public sealed class ExpenseEntryRepository
         const string sql = """
             SELECT
                 ExpenseEntryId,
+                Title,
                 ExpenseDateTime,
                 TotalCost,
                 Notes
@@ -71,16 +73,19 @@ public sealed class ExpenseEntryRepository
         const string sql = """
             INSERT INTO dbo.ExpenseEntries
             (
+                Title,
                 TotalCost,
                 Notes
             )
             OUTPUT
                 INSERTED.ExpenseEntryId,
+                INSERTED.Title,
                 INSERTED.ExpenseDateTime,
                 INSERTED.TotalCost,
                 INSERTED.Notes
             VALUES
             (
+                @Title,
                 @TotalCost,
                 @Notes
             );
@@ -93,6 +98,7 @@ public sealed class ExpenseEntryRepository
                     commandText: sql,
                     parameters: new
                     {
+                        Title = input.Title,
                         TotalCost = input.TotalCost,
                         Notes = input.Notes
                     },

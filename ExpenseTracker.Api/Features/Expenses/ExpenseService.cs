@@ -144,6 +144,7 @@ public sealed class ExpenseService
             ExpenseEntry expenseEntry = await _expenseEntryService.CreateAsync(
                 new CreateExpenseEntryInput
                 {
+                    Title = input.Title,
                     TotalCost = totalCost,
                     Notes = input.Notes
                 },

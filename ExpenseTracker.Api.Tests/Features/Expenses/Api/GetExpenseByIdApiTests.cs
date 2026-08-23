@@ -29,14 +29,22 @@ public sealed class GetExpenseByIdApiTests
                 _client,
                 unitPrice: 80.00m);
 
+        string uniqueValue = Guid.NewGuid()
+            .ToString("N");
+
+        string title = 
+            $"Test Expense {uniqueValue}";
+
         string notes =
-            $"Get expense test {Guid.NewGuid():N}";
+            $"Get expense test {uniqueValue}";
 
         try
         {
             ExpenseResult createdExpense =
                 await ExpenseApiTestHelper.CreateExpenseAsync(
                     _client,
+                    title: title,
+                    items:
                     [
                         new CreateExpenseItemRequest
                         {
@@ -44,7 +52,7 @@ public sealed class GetExpenseByIdApiTests
                             Quantity = 2.500m
                         }
                     ],
-                    notes);
+                    notes: notes);
 
             HttpResponseMessage response =
                 await _client.GetAsync(
@@ -65,6 +73,10 @@ public sealed class GetExpenseByIdApiTests
             Assert.Equal(
                 createdExpense.ExpenseEntry.ExpenseEntryId,
                 retrievedExpense.ExpenseEntry.ExpenseEntryId);
+
+            Assert.Equal(
+                title,
+                retrievedExpense.ExpenseEntry.Title);
 
             Assert.Equal(
                 notes,
@@ -122,9 +134,14 @@ public sealed class GetExpenseByIdApiTests
                 _client,
                 unitPrice: 40.00m);
 
+        string title = 
+            $"Historical Expense {Guid.NewGuid():N}";
+
         ExpenseResult createdExpense =
             await ExpenseApiTestHelper.CreateExpenseAsync(
                 _client,
+                title: title,
+                items:
                 [
                     new CreateExpenseItemRequest
                     {
@@ -132,7 +149,7 @@ public sealed class GetExpenseByIdApiTests
                         Quantity = 3.000m
                     }
                 ],
-                "Historical snapshot test");
+                notes: "Historical snapshot test");
 
         HttpResponseMessage deleteResponse =
             await _client.DeleteAsync(
@@ -158,6 +175,10 @@ public sealed class GetExpenseByIdApiTests
                 TestContext.Current.CancellationToken);
 
         Assert.NotNull(retrievedExpense);
+
+        Assert.Equal(
+            title,
+            retrievedExpense.ExpenseEntry.Title);
 
         ExpenseItem expenseItem =
             Assert.Single(

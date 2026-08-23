@@ -54,6 +54,9 @@ public sealed class GetExpensesApiTests
                 _client,
                 unitPrice: 5.50m);
 
+        string title =
+            $"Office Supplies {Guid.NewGuid():N}";
+
         string notes =
             $"Get all expense test {Guid.NewGuid():N}";
 
@@ -62,6 +65,8 @@ public sealed class GetExpensesApiTests
             ExpenseResult createdExpense =
                 await ExpenseApiTestHelper.CreateExpenseAsync(
                     _client,
+                    title: title,
+                    items:
                     [
                         new CreateExpenseItemRequest
                         {
@@ -74,7 +79,7 @@ public sealed class GetExpensesApiTests
                             Quantity = 4.000m
                         }
                     ],
-                    notes);
+                    notes: notes);
 
             HttpResponseMessage response =
                 await _client.GetAsync(
@@ -98,6 +103,10 @@ public sealed class GetExpensesApiTests
                     expense =>
                         expense.ExpenseEntry.ExpenseEntryId ==
                         createdExpense.ExpenseEntry.ExpenseEntryId);
+
+            Assert.Equal(
+                title,
+                retrievedExpense.ExpenseEntry.Title);
 
             Assert.Equal(
                 notes,
@@ -157,11 +166,22 @@ public sealed class GetExpensesApiTests
                 _client,
                 unitPrice: 10.00m);
 
+        string uniqueValue = Guid.NewGuid()
+            .ToString("N");
+
+        string firstTitle = 
+            $"First Expense {uniqueValue}";
+
+        string secondTitle =
+            $"Second Expense {uniqueValue}";
+
         try
         {
             ExpenseResult firstExpense =
                 await ExpenseApiTestHelper.CreateExpenseAsync(
-                    _client,
+                    client: _client,
+                    title: firstTitle,
+                    items:
                     [
                         new CreateExpenseItemRequest
                         {
@@ -169,11 +189,13 @@ public sealed class GetExpensesApiTests
                             Quantity = 1.000m
                         }
                     ],
-                    $"First ordering test {Guid.NewGuid():N}");
+                    notes: $"First ordering test {Guid.NewGuid():N}");
 
             ExpenseResult secondExpense =
                 await ExpenseApiTestHelper.CreateExpenseAsync(
-                    _client,
+                    client: _client,
+                    title: secondTitle,
+                    items:
                     [
                         new CreateExpenseItemRequest
                         {
@@ -181,7 +203,7 @@ public sealed class GetExpensesApiTests
                             Quantity = 2.000m
                         }
                     ],
-                    $"Second ordering test {Guid.NewGuid():N}");
+                    notes: $"Second ordering test {Guid.NewGuid():N}");
 
             HttpResponseMessage response =
                 await _client.GetAsync(

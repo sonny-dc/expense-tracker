@@ -46,11 +46,13 @@ internal static class ExpenseApiTestHelper
 
     public static async Task<ExpenseResult> CreateExpenseAsync(
         HttpClient client,
+        string title,
         IReadOnlyList<CreateExpenseItemRequest> items,
         string? notes = null)
     {
         var request = new CreateExpenseRequest
         {
+            Title = title,
             Notes = notes,
             Items = items
         };

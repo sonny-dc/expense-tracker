@@ -39,6 +39,7 @@ public sealed class CreateExpenseApiTests
 
         var request = new CreateExpenseRequest
         {
+            Title = "Create Expense Test",
             Notes = "Valid expense creation test",
             Items =
             [
@@ -77,6 +78,10 @@ public sealed class CreateExpenseApiTests
 
             Assert.True(
                 expense.ExpenseEntry.ExpenseEntryId > 0);
+
+            Assert.Equal(
+                request.Title,
+                expense.ExpenseEntry.Title);
 
             Assert.Equal(
                 request.Notes,
@@ -148,6 +153,7 @@ public sealed class CreateExpenseApiTests
 
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Notes = "Duplicate item normalization test",
             Items =
             [
@@ -181,6 +187,10 @@ public sealed class CreateExpenseApiTests
                     TestContext.Current.CancellationToken);
 
             Assert.NotNull(expense);
+
+            Assert.Equal(
+                request.Title,
+                expense.ExpenseEntry.Title);
 
             ExpenseItem expenseItem =
                 Assert.Single(expense.ExpenseItems);
@@ -223,6 +233,7 @@ public sealed class CreateExpenseApiTests
 
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Notes = "Rounding test",
             Items =
             [
@@ -251,6 +262,10 @@ public sealed class CreateExpenseApiTests
                     TestContext.Current.CancellationToken);
 
             Assert.NotNull(expense);
+
+            Assert.Equal(
+                request.Title,
+                expense.ExpenseEntry.Title);
 
             ExpenseItem expenseItem =
                 Assert.Single(expense.ExpenseItems);
@@ -284,6 +299,7 @@ public sealed class CreateExpenseApiTests
 
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Notes = null,
             Items =
             [
@@ -312,6 +328,11 @@ public sealed class CreateExpenseApiTests
                     TestContext.Current.CancellationToken);
 
             Assert.NotNull(expense);
+
+            Assert.Equal(
+                request.Title,
+                expense.ExpenseEntry.Title);
+
             Assert.Null(expense.ExpenseEntry.Notes);
         }
         finally
@@ -329,6 +350,7 @@ public sealed class CreateExpenseApiTests
 
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Notes = "Missing item test",
             Items =
             [
@@ -363,6 +385,7 @@ public sealed class CreateExpenseApiTests
 
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Notes = "Partial missing item test",
             Items =
             [
@@ -404,6 +427,7 @@ public sealed class CreateExpenseApiTests
     {
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Notes = "Empty items test",
             Items = []
         };
@@ -424,6 +448,7 @@ public sealed class CreateExpenseApiTests
     {
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Items =
             [
                 new CreateExpenseItemRequest
@@ -450,6 +475,7 @@ public sealed class CreateExpenseApiTests
     {
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Items =
             [
                 new CreateExpenseItemRequest
@@ -476,6 +502,7 @@ public sealed class CreateExpenseApiTests
     {
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Items =
             [
                 new CreateExpenseItemRequest
@@ -498,10 +525,38 @@ public sealed class CreateExpenseApiTests
     }
 
     [Fact]
+    public async Task CreateAsync_WithEmptyTitle_ShouldReturnBadRequest()
+    {
+        var request = new CreateExpenseRequest
+        {
+            Title = string.Empty,
+            Items =
+            [
+                new CreateExpenseItemRequest
+                {
+                    ItemId = 1,
+                    Quantity = 1.000m
+                }
+            ]
+        };
+
+        HttpResponseMessage response =
+            await _client.PostAsJsonAsync(
+                "/api/v1/expenses",
+                request,
+                TestContext.Current.CancellationToken);
+
+        Assert.Equal(
+            HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
     public async Task CreateAsync_WithNotesLongerThan500Characters_ShouldReturnBadRequest()
     {
         var request = new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Notes = new string('A', 501),
             Items =
             [
@@ -529,6 +584,7 @@ public sealed class CreateExpenseApiTests
     {
         var request = new
         {
+            title = "Office Supplies",
             notes = "Unknown property test",
             unexpectedProperty = true,
             items = new[]
@@ -557,6 +613,7 @@ public sealed class CreateExpenseApiTests
     {
         var request = new
         {
+            title = "Office Supplies",
             notes = "Unknown nested property test",
             items = new[]
             {

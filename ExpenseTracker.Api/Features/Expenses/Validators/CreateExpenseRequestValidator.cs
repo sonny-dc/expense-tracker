@@ -8,6 +8,10 @@ public sealed class CreateExpenseRequestValidator
 {
     public CreateExpenseRequestValidator()
     {
+        RuleFor(request => request.Title)
+            .NotEmpty()
+            .MaximumLength(100);
+            
         RuleFor(request => request.Notes)
             .MaximumLength(500)
             .When(request => request.Notes is not null);

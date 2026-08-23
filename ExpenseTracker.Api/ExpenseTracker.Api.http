@@ -73,6 +73,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Office Supplies",
   "notes": "HTTP file expense creation test",
   "items": [
     {
@@ -89,6 +90,11 @@ Accept: application/json
 
 ###
 # Retrieve the newly created expense
+#
+# Expected:
+# - Title is Office Supplies
+# - Total cost is 546.50
+# - Two expense item lines are returned
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpense.response.body.$.expenseEntry.expenseEntryId}}
 Accept: application/json
@@ -117,6 +123,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Bulk Paper Purchase",
   "notes": "Duplicate item ID normalization test",
   "items": [
     {
@@ -133,6 +140,11 @@ Accept: application/json
 
 ###
 # Retrieve the normalized expense
+#
+# Expected:
+# - One expense item line
+# - Normalized quantity is 4.000
+# - Total cost is 1000.00
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpenseWithDuplicateItemIds.response.body.$.expenseEntry.expenseEntryId}}
 Accept: application/json
@@ -141,7 +153,7 @@ Accept: application/json
 ###
 # Create an expense without notes
 #
-# Notes are optional.
+# Notes are optional, but title is required.
 #
 # @name createExpenseWithoutNotes
 
@@ -150,9 +162,53 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Ballpen Purchase",
   "items": [
     {
       "itemId": {{createBallpen.response.body.$.itemId}},
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Validation failure: empty title
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "",
+  "notes": "Empty title test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Validation failure: title exceeds 100 characters
+#
+# The title below contains 101 characters.
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "notes": "Title length test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
       "quantity": 1.000
     }
   ]
@@ -169,6 +225,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Empty Items Test",
   "notes": "This request should fail",
   "items": []
 }
@@ -184,6 +241,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Invalid Item Test",
   "notes": "Invalid item ID test",
   "items": [
     {
@@ -204,6 +262,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Zero Quantity Test",
   "notes": "Zero quantity test",
   "items": [
     {
@@ -224,6 +283,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Negative Quantity Test",
   "notes": "Negative quantity test",
   "items": [
     {
@@ -244,6 +304,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Quantity Scale Test",
   "notes": "Quantity scale test",
   "items": [
     {
@@ -264,6 +325,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Notes Length Test",
   "notes": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
   "items": [
     {
@@ -280,15 +342,16 @@ Accept: application/json
 # The item ID passes validation but does not exist.
 # Expected: 404 Not Found
 #
-# The expense transaction should roll back without creating an
-# ExpenseEntry or any ExpenseItems.
+# Item validation occurs before the ExpenseEntry is inserted, so no expense
+# record or expense item line should be created for this request.
 
 POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
 Content-Type: application/json
 Accept: application/json
 
 {
-  "notes": "Missing item transaction rollback test",
+  "title": "Missing Item Test",
+  "notes": "Missing item handling test",
   "items": [
     {
       "itemId": {{createBondPaper.response.body.$.itemId}},
@@ -321,6 +384,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Unknown Parent Property Test",
   "notes": "Unknown parent property test",
   "unexpectedProperty": true,
   "items": [
@@ -342,6 +406,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
+  "title": "Unknown Nested Property Test",
   "notes": "Unknown nested property test",
   "items": [
     {
@@ -366,6 +431,7 @@ Accept: application/json
 ###
 # Retrieve the original expense after deleting the first catalog item
 #
+# The expense title and parent information should remain.
 # The bond-paper expense item should still contain:
 # - ItemNameSnapshot
 # - ItemCodeSnapshot
@@ -390,7 +456,7 @@ Accept: application/json
 ###
 # Final retrieval of all expenses
 #
-# Created expense history should remain after deleting catalog items.
+# Created expense history and titles should remain after deleting source items.
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
 Accept: application/json

@@ -24,6 +24,62 @@ public sealed class CreateExpenseRequestValidatorTests
         Assert.Empty(result.Errors);
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task ValidateAsync_WithEmptyTitle_ShouldBeInvalid(
+        string title)
+    {
+        CreateExpenseRequest request = CreateValidRequest();
+        request.Title = title;
+
+        ValidationResult result =
+            await _validator.ValidateAsync(
+                request,
+                TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error => error.PropertyName ==
+                nameof(CreateExpenseRequest.Title));
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WithTitleHaving100Characters_ShouldBeValid()
+    {
+        CreateExpenseRequest request = CreateValidRequest();
+        request.Title = new string('A', 100);
+
+        ValidationResult result =
+            await _validator.ValidateAsync(
+                request,
+                TestContext.Current.CancellationToken);
+
+        Assert.True(result.IsValid);
+        Assert.Empty(result.Errors);
+    }
+
+    [Fact]
+    public async Task ValidateAsync_WithTitleLongerThan100Characters_ShouldBeInvalid()
+    {
+        CreateExpenseRequest request = CreateValidRequest();
+        request.Title = new string('A', 101);
+
+        ValidationResult result =
+            await _validator.ValidateAsync(
+                request,
+                TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error => error.PropertyName ==
+                nameof(CreateExpenseRequest.Title));
+    }
+
     [Fact]
     public async Task ValidateAsync_WithNullNotes_ShouldBeValid()
     {
@@ -252,6 +308,7 @@ public sealed class CreateExpenseRequestValidatorTests
     {
         return new CreateExpenseRequest
         {
+            Title = "Office Supplies",
             Notes = "Office supply expense",
             Items =
             [
