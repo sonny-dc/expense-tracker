@@ -9,7 +9,7 @@
     [BrandSnapshot] NVARCHAR(100) NOT NULL,
 
     [Quantity] DECIMAL(18, 3) NOT NULL,
-    [UnitCostSnapshot] DECIMAL(18, 2) NOT NULL,
+    [UnitPriceSnapshot] DECIMAL(18, 2) NOT NULL,
     [LineTotal] DECIMAL(18, 2) NOT NULL,
 
     CONSTRAINT [PK_ExpenseItems]
@@ -28,8 +28,8 @@
     CONSTRAINT [CK_ExpenseItems_Quantity]
         CHECK ([Quantity] > 0),
 
-    CONSTRAINT [CK_ExpenseItems_UnitCostSnapshot]
-        CHECK ([UnitCostSnapshot] >= 0),
+    CONSTRAINT [CK_ExpenseItems_UnitPriceSnapshot]
+        CHECK ([UnitPriceSnapshot] >= 0),
 
     CONSTRAINT [CK_ExpenseItems_LineTotal]
         CHECK ([LineTotal] >= 0)

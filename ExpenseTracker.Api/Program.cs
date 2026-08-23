@@ -1,6 +1,7 @@
 using System.Text.Json.Serialization;
 
 using ExpenseTracker.Api.Features.Items;
+using ExpenseTracker.Api.Features.Expenses;
 using ExpenseTracker.Api.Infrastructure.Routing;
 using ExpenseTracker.Api.Infrastructure.Database;
 using ExpenseTracker.Api.Infrastructure.Errors;
@@ -27,8 +28,11 @@ namespace ExpenseTracker.Api
             builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
             builder.Services.AddOpenApi();
+
             builder.Services.AddDatabase(builder.Configuration);
+            
             builder.Services.AddItems();
+            builder.Services.AddExpenses();
 
             var app = builder.Build();
 

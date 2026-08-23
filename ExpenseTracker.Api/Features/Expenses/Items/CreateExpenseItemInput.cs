@@ -8,6 +8,6 @@ public sealed class CreateExpenseItemInput
     public string ItemCodeSnapshot { get; set; } = string.Empty;
     public string BrandSnapshot { get; set; } = string.Empty;
     public decimal Quantity { get; set; }
-    public decimal UnitCostSnapshot { get; set; }
+    public decimal UnitPriceSnapshot { get; set; }
     public decimal LineTotal { get; set; }
 }

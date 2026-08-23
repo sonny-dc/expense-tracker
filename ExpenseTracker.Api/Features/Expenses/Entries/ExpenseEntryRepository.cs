@@ -23,6 +23,7 @@ public sealed class ExpenseEntryRepository
             FROM dbo.ExpenseEntries
             ORDER BY ExpenseDateTime DESC, ExpenseEntryId DESC;
         """;
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -49,6 +50,7 @@ public sealed class ExpenseEntryRepository
             FROM dbo.ExpenseEntries
             WHERE ExpenseEntryId = @ExpenseEntryId;
         """;
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -83,6 +85,7 @@ public sealed class ExpenseEntryRepository
                 @Notes
             );
         """;
+        
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {

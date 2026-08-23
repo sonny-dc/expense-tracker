@@ -20,6 +20,22 @@ public sealed class ExpenseItemService
             cancellationToken);
     }
 
+    public async Task<IReadOnlyList<ExpenseItem>> GetAllByExpenseEntryIdsAsync(
+        IReadOnlyCollection<int> expenseEntryIds,
+        CancellationToken cancellationToken = default)
+    {
+        int[] distinctExpenseEntryIds = expenseEntryIds.Distinct().ToArray();
+
+        if (distinctExpenseEntryIds.Length == 0)
+        {
+            return [];
+        }
+
+        return await _expenseItemRepository.GetAllByExpenseEntryIdsAsync(
+            distinctExpenseEntryIds, 
+            cancellationToken);
+    }
+
     public async Task<ExpenseItem> GetByIdAsync(
         int expenseItemId,
         CancellationToken cancellationToken = default)

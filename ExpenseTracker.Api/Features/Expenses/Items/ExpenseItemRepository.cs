@@ -24,18 +24,53 @@ public sealed class ExpenseItemRepository
                 ItemCodeSnapshot,
                 BrandSnapshot,
                 Quantity,
-                UnitCostSnapshot,
+                UnitPriceSnapshot,
                 LineTotal
             FROM dbo.ExpenseItems
             WHERE ExpenseEntryId = @ExpenseEntryId
             ORDER BY ExpenseItemId ASC;
         """;
+        
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
                 var command = new CommandDefinition(
                     commandText: sql,
                     parameters: new { ExpenseEntryId = expenseEntryId },
+                    transaction: transaction,
+                    cancellationToken: cancellationToken);
+                IEnumerable<ExpenseItem> expenseItems = await connection.QueryAsync<ExpenseItem>(command);
+                return expenseItems.AsList();
+            }
+        );
+    }
+
+    public async Task<IReadOnlyList<ExpenseItem>> GetAllByExpenseEntryIdsAsync(
+        IReadOnlyCollection<int> expenseEntryIds,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT
+                ExpenseItemId,
+                ExpenseEntryId,
+                ItemId,
+                ItemNameSnapshot,
+                ItemCodeSnapshot,
+                BrandSnapshot,
+                Quantity,
+                UnitPriceSnapshot,
+                LineTotal
+            FROM dbo.ExpenseItems
+            WHERE ExpenseEntryId IN @ExpenseEntryIds
+            ORDER BY ExpenseEntryId, ExpenseItemId;
+        """;
+
+        return await _databaseExecutor.ExecuteAsync(
+            async (connection, transaction) =>
+            {
+                var command = new CommandDefinition(
+                    commandText: sql,
+                    parameters: new { ExpenseEntryIds = expenseEntryIds },
                     transaction: transaction,
                     cancellationToken: cancellationToken);
                 IEnumerable<ExpenseItem> expenseItems = await connection.QueryAsync<ExpenseItem>(command);
@@ -57,11 +92,12 @@ public sealed class ExpenseItemRepository
                 ItemCodeSnapshot,
                 BrandSnapshot,
                 Quantity,
-                UnitCostSnapshot,
+                UnitPriceSnapshot,
                 LineTotal
             FROM dbo.ExpenseItems
             WHERE ExpenseItemId = @ExpenseItemId;
         """;
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -87,7 +123,7 @@ public sealed class ExpenseItemRepository
                 ItemCodeSnapshot,
                 BrandSnapshot,
                 Quantity,
-                UnitCostSnapshot,
+                UnitPriceSnapshot,
                 LineTotal
             )
             OUTPUT
@@ -98,7 +134,7 @@ public sealed class ExpenseItemRepository
                 INSERTED.ItemCodeSnapshot,
                 INSERTED.BrandSnapshot,
                 INSERTED.Quantity,
-                INSERTED.UnitCostSnapshot,
+                INSERTED.UnitPriceSnapshot,
                 INSERTED.LineTotal
             VALUES (
                 @ExpenseEntryId,
@@ -107,10 +143,11 @@ public sealed class ExpenseItemRepository
                 @ItemCodeSnapshot,
                 @BrandSnapshot,
                 @Quantity,
-                @UnitCostSnapshot,
+                @UnitPriceSnapshot,
                 @LineTotal
             );
         """;
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -124,7 +161,7 @@ public sealed class ExpenseItemRepository
                         ItemCodeSnapshot = input.ItemCodeSnapshot,
                         BrandSnapshot = input.BrandSnapshot,
                         Quantity = input.Quantity,
-                        UnitCostSnapshot = input.UnitCostSnapshot,
+                        UnitPriceSnapshot = input.UnitPriceSnapshot,
                         LineTotal = input.LineTotal
                     },
                     transaction: transaction,

@@ -1,39 +1,396 @@
 @ExpenseTrackerApi_HostAddress = https://localhost:7120
-@ItemId = 1
 
-### Get all items
+@MissingItemId = 2147483647
+@MissingExpenseEntryId = 2147483647
+
+###
+# Health check through an existing endpoint
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/items
 Accept: application/json
 
-### Create item
+
+###
+# Create the first catalog item used by the expense tests
+#
+# @name createBondPaper
 
 POST {{ExpenseTrackerApi_HostAddress}}/api/v1/items
 Content-Type: application/json
 Accept: application/json
 
 {
-  "name": "Bond Paper",
-  "code": "BP-A5",
-  "brand": "PaperOne",
+  "name": "Expense Test Bond Paper {{$guid}}",
+  "code": "BP-{{$timestamp}}",
+  "brand": "PaperOne {{$guid}}",
   "unitPrice": 250.00
 }
 
-### Get item by ID
 
-GET {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{ItemId}}
-Accept: application/json
+###
+# Create the second catalog item used by the expense tests
+#
+# @name createBallpen
 
-### Update item price
-
-PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{ItemId}}
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/items
 Content-Type: application/json
 Accept: application/json
 
 {
-  "unitPrice": 275.00
+  "name": "Expense Test Ballpen {{$guid}}",
+  "code": "PEN-{{$timestamp}}",
+  "brand": "Test Brand {{$guid}}",
+  "unitPrice": 15.50
 }
 
-### Delete item
 
-DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{ItemId}}
+###
+# Get the first created catalog item
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{createBondPaper.response.body.$.itemId}}
+Accept: application/json
+
+
+###
+# Get the second created catalog item
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{createBallpen.response.body.$.itemId}}
+Accept: application/json
+
+
+###
+# Create an expense using two different items
+#
+# Expected backend calculation:
+# Bond paper: 250.00 * 2.000 = 500.00
+# Ballpen:     15.50 * 3.000 =  46.50
+# Total:                         546.50
+#
+# @name createExpense
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "HTTP file expense creation test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 2.000
+    },
+    {
+      "itemId": {{createBallpen.response.body.$.itemId}},
+      "quantity": 3.000
+    }
+  ]
+}
+
+
+###
+# Retrieve the newly created expense
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpense.response.body.$.expenseEntry.expenseEntryId}}
+Accept: application/json
+
+
+###
+# Retrieve all expenses
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Accept: application/json
+
+
+###
+# Create an expense containing the same item ID more than once
+#
+# The backend should normalize the two lines into one expense item:
+# 1.250 + 2.750 = 4.000
+#
+# Expected total:
+# 250.00 * 4.000 = 1000.00
+#
+# @name createExpenseWithDuplicateItemIds
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "Duplicate item ID normalization test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 1.250
+    },
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 2.750
+    }
+  ]
+}
+
+
+###
+# Retrieve the normalized expense
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpenseWithDuplicateItemIds.response.body.$.expenseEntry.expenseEntryId}}
+Accept: application/json
+
+
+###
+# Create an expense without notes
+#
+# Notes are optional.
+#
+# @name createExpenseWithoutNotes
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "items": [
+    {
+      "itemId": {{createBallpen.response.body.$.itemId}},
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Validation failure: empty items collection
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "This request should fail",
+  "items": []
+}
+
+
+###
+# Validation failure: item ID must be greater than zero
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "Invalid item ID test",
+  "items": [
+    {
+      "itemId": 0,
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Validation failure: quantity must be greater than zero
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "Zero quantity test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 0
+    }
+  ]
+}
+
+
+###
+# Validation failure: negative quantity
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "Negative quantity test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": -1.000
+    }
+  ]
+}
+
+
+###
+# Validation failure: quantity has more than three decimal places
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "Quantity scale test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 1.2345
+    }
+  ]
+}
+
+
+###
+# Validation failure: notes exceed 500 characters
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Missing catalog item
+#
+# The item ID passes validation but does not exist.
+# Expected: 404 Not Found
+#
+# The expense transaction should roll back without creating an
+# ExpenseEntry or any ExpenseItems.
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "Missing item transaction rollback test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 1.000
+    },
+    {
+      "itemId": {{MissingItemId}},
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Missing expense entry
+#
+# Expected: 404 Not Found
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{MissingExpenseEntryId}}
+Accept: application/json
+
+
+###
+# Unknown property rejection at the parent request level
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "Unknown parent property test",
+  "unexpectedProperty": true,
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Unknown property rejection inside a nested expense item
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "notes": "Unknown nested property test",
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 1.000,
+      "lineTotal": 0
+    }
+  ]
+}
+
+
+###
+# Delete the first catalog item
+#
+# Existing expense-item snapshots should remain.
+# ExpenseItems.ItemId should become null through ON DELETE SET NULL.
+
+DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{createBondPaper.response.body.$.itemId}}
+Accept: application/json
+
+
+###
+# Retrieve the original expense after deleting the first catalog item
+#
+# The bond-paper expense item should still contain:
+# - ItemNameSnapshot
+# - ItemCodeSnapshot
+# - BrandSnapshot
+# - UnitPriceSnapshot
+# - Quantity
+# - LineTotal
+#
+# Its ItemId should now be null.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpense.response.body.$.expenseEntry.expenseEntryId}}
+Accept: application/json
+
+
+###
+# Delete the second catalog item
+
+DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{createBallpen.response.body.$.itemId}}
+Accept: application/json
+
+
+###
+# Final retrieval of all expenses
+#
+# Created expense history should remain after deleting catalog items.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Accept: application/json
