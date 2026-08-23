@@ -207,6 +207,27 @@ public sealed class UpdateItemRequestValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_WithUnitPriceHavingMoreThanTwoDecimalPlaces_ShouldBeInvalid()
+    {
+        var request = new UpdateItemRequest
+        {
+            UnitPrice = 250.123m
+        };
+
+        ValidationResult result =
+            await _validator.ValidateAsync(
+                request,
+                TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error => error.PropertyName ==
+                nameof(UpdateItemRequest.UnitPrice));
+    }
+
+    [Fact]
     public async Task ValidateAsync_WithZeroUnitPrice_ShouldBeValid()
     {
         var request = new UpdateItemRequest

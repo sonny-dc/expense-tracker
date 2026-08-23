@@ -166,6 +166,25 @@ public sealed class CreateItemRequestValidatorTests
         Assert.Empty(result.Errors);
     }
 
+    [Fact]
+    public async Task ValidateAsync_WithUnitPriceHavingMoreThanTwoDecimalPlaces_ShouldBeInvalid()
+    {
+        CreateItemRequest request = CreateValidRequest();
+        request.UnitPrice = 250.123m;
+
+        ValidationResult result =
+            await _validator.ValidateAsync(
+                request,
+                TestContext.Current.CancellationToken);
+
+        Assert.False(result.IsValid);
+
+        Assert.Contains(
+            result.Errors,
+            error => error.PropertyName ==
+                nameof(CreateItemRequest.UnitPrice));
+    }
+
     private static CreateItemRequest CreateValidRequest()
     {
         return new CreateItemRequest

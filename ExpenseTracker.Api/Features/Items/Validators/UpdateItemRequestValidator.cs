@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace ExpenseTracker.Api.Features.Items.Validators;
 
-public class UpdateItemRequestValidator
+public sealed class UpdateItemRequestValidator
     : AbstractValidator<UpdateItemRequest>
 {
     public UpdateItemRequestValidator()
@@ -29,6 +29,10 @@ public class UpdateItemRequestValidator
 
         RuleFor(request => request.UnitPrice)
             .GreaterThanOrEqualTo(0)
+            .PrecisionScale(
+                precision: 18,
+                scale: 2,
+                ignoreTrailingZeros: true)
             .When(request => request.UnitPrice.HasValue);
     }
 

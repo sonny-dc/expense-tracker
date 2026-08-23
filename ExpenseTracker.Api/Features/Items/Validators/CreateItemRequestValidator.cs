@@ -2,7 +2,7 @@ using FluentValidation;
 
 namespace ExpenseTracker.Api.Features.Items.Validators;
 
-public class CreateItemRequestValidator
+public sealed class CreateItemRequestValidator
     : AbstractValidator<CreateItemRequest>
 {
     public CreateItemRequestValidator()
@@ -20,6 +20,10 @@ public class CreateItemRequestValidator
             .MaximumLength(100);
 
         RuleFor(request => request.UnitPrice)
-            .GreaterThanOrEqualTo(0);
+            .GreaterThanOrEqualTo(0)
+            .PrecisionScale(
+                precision: 18,
+                scale: 2,
+                ignoreTrailingZeros: true);
     }
 }
