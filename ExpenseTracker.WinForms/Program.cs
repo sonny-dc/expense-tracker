@@ -8,7 +8,12 @@ using ExpenseTracker.WinForms.Features.Expenses.Views;
 using ExpenseTracker.WinForms.Features.Home.Views;
 using ExpenseTracker.WinForms.Features.Items.Views;
 
+using ExpenseTracker.WinForms.Features.Settings.Models;
+using ExpenseTracker.WinForms.Features.Settings.Views;
+using ExpenseTracker.WinForms.Features.Settings.Services;
+
 using ExpenseTracker.WinForms.Shell;
+using ExpenseTracker.WinForms.Infrastructure.Presentation;
 using ExpenseTracker.WinForms.Infrastructure.Http;
 
 namespace ExpenseTracker.WinForms;
@@ -19,6 +24,8 @@ internal static class Program
     private static void Main()
     {
         ApplicationConfiguration.Initialize();
+
+        RegionalPresets.Validate();
 
         HostApplicationBuilder builder =
             Host.CreateApplicationBuilder();
@@ -42,9 +49,13 @@ internal static class Program
         builder.Services.AddSingleton<ItemsApiClient>();
         builder.Services.AddSingleton<ExpensesApiClient>();
 
+        builder.Services.AddSingleton<DisplaySettingsService>();
+        builder.Services.AddSingleton<DisplayFormatter>();
+
         builder.Services.AddSingleton<HomeView>();
         builder.Services.AddSingleton<ItemsView>();
         builder.Services.AddSingleton<ExpensesView>();
+        builder.Services.AddSingleton<SettingsView>();
 
         builder.Services.AddSingleton<MainForm>();
 

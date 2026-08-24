@@ -252,6 +252,7 @@ partial class ItemsView
         // unitPriceColumn
         // 
         unitPriceColumn.DataPropertyName = "UnitPrice";
+        unitPriceColumn.FillWeight = 115F;
         unitPriceColumn.HeaderText = "Unit Price";
         unitPriceColumn.MinimumWidth = 6;
         unitPriceColumn.Name = "unitPriceColumn";
@@ -260,8 +261,7 @@ partial class ItemsView
             new DataGridViewCellStyle
             {
                 Alignment =
-                    DataGridViewContentAlignment.MiddleRight,
-                Format = "N2"
+                    DataGridViewContentAlignment.MiddleRight
             };
         // 
         // statusLabel

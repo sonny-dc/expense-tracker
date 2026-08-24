@@ -1,14 +1,15 @@
 ﻿using System.Text.Json;
-using System.Globalization;
 
 using ExpenseTracker.WinForms.Features.Expenses.Api;
 using ExpenseTracker.WinForms.Features.Expenses.Models;
 using ExpenseTracker.WinForms.Infrastructure.Dialogs;
 using ExpenseTracker.WinForms.Infrastructure.Http;
+using ExpenseTracker.WinForms.Infrastructure.Presentation;
 
 using ExpenseTracker.WinForms.Features.Items.Models;
-
 using ExpenseTracker.WinForms.Features.Items.Api;
+
+using ExpenseTracker.WinForms.Features.Settings.Services;
 
 namespace ExpenseTracker.WinForms.Features.Expenses.Views;
 
@@ -16,6 +17,8 @@ public partial class ExpensesView : UserControl
 {
     private readonly ExpensesApiClient _expensesApiClient;
     private readonly ItemsApiClient _itemsApiClient;
+    private readonly DisplayFormatter _displayFormatter;
+    private readonly DisplaySettingsService _displaySettingsService;
 
     private IReadOnlyList<ExpenseResult> _expenses = [];
 
@@ -24,12 +27,16 @@ public partial class ExpensesView : UserControl
 
     public ExpensesView(
         ExpensesApiClient expensesApiClient,
-        ItemsApiClient itemsApiClient)
+        ItemsApiClient itemsApiClient,
+        DisplayFormatter displayFormatter,
+        DisplaySettingsService displaySettingsService)
     {
         InitializeComponent();
 
         _expensesApiClient = expensesApiClient;
         _itemsApiClient = itemsApiClient;
+        _displayFormatter = displayFormatter;
+        _displaySettingsService = displaySettingsService;
 
         Load += ExpensesView_Load;
         refreshButton.Click += refreshButton_Click;
@@ -37,6 +44,9 @@ public partial class ExpensesView : UserControl
 
         expensesFlowLayoutPanel.ClientSizeChanged +=
             expensesFlowLayoutPanel_ClientSizeChanged;
+
+        _displaySettingsService.SettingsChanged +=
+            displaySettingsService_SettingsChanged;
     }
 
     private async void ExpensesView_Load(
@@ -89,7 +99,9 @@ public partial class ExpensesView : UserControl
             }
 
             using var recordExpenseForm =
-                new RecordExpenseForm(items);
+                new RecordExpenseForm(
+                    items,
+                    _displayFormatter);
 
             DialogResult dialogResult =
                 recordExpenseForm.ShowDialog(this);
@@ -268,7 +280,7 @@ public partial class ExpensesView : UserControl
                 this,
                 $"Expense #{createdExpense.ExpenseEntry.ExpenseEntryId} " +
                 $"was recorded successfully.\n\n" +
-                $"Final total: {FormatPeso(createdExpense.ExpenseEntry.TotalCost)}",
+                $"Final total: {_displayFormatter.FormatCurrency(createdExpense.ExpenseEntry.TotalCost)}",
                 "Expense Recorded",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);
@@ -404,7 +416,7 @@ public partial class ExpensesView : UserControl
                 cardPanel.Width - 216,
                 14),
             Size = new Size(196, 32),
-            Text = FormatPeso(entry.TotalCost),
+            Text = _displayFormatter.FormatCurrency(entry.TotalCost),
             TextAlign =
                 ContentAlignment.MiddleRight
         };
@@ -423,7 +435,7 @@ public partial class ExpensesView : UserControl
             AutoSize = true,
             ForeColor = Color.DimGray,
             Location = new Point(150, 51),
-            Text = FormatExpenseDateTime(
+            Text = _displayFormatter.FormatUtcDateTime(
                 entry.ExpenseDateTime)
         };
 
@@ -487,7 +499,9 @@ public partial class ExpensesView : UserControl
         ExpenseResult expense)
     {
         using var expenseDetailsForm =
-            new ExpenseDetailsForm(expense);
+            new ExpenseDetailsForm(
+                expense,
+                _displayFormatter);
 
         expenseDetailsForm.ShowDialog(this);
     }
@@ -551,23 +565,6 @@ public partial class ExpensesView : UserControl
             };
     }
 
-    private static string FormatExpenseDateTime(
-        DateTime expenseDateTime)
-    {
-        DateTime utcDateTime =
-            expenseDateTime.Kind == DateTimeKind.Utc
-                ? expenseDateTime
-                : DateTime.SpecifyKind(
-                    expenseDateTime,
-                    DateTimeKind.Utc);
-
-        DateTime localDateTime =
-            utcDateTime.ToLocalTime();
-
-        return localDateTime.ToString(
-            "MMM d, yyyy h:mm tt");
-    }
-
     private static string GetItemCountText(
         int itemCount)
     {
@@ -605,11 +602,16 @@ public partial class ExpensesView : UserControl
             "...");
     }
 
-    private static string FormatPeso(
-        decimal amount)
+    private void displaySettingsService_SettingsChanged(
+        object? sender,
+        EventArgs e)
     {
-        return amount.ToString(
-            "C2",
-            CultureInfo.GetCultureInfo("en-PH"));
+        if (!_hasLoaded)
+        {
+            return;
+        }
+
+        DisplayExpenses();
     }
+
 }

@@ -1,6 +1,6 @@
-﻿using System.Globalization;
+﻿using ExpenseTracker.WinForms.Features.Expenses.Models;
 
-using ExpenseTracker.WinForms.Features.Expenses.Models;
+using ExpenseTracker.WinForms.Infrastructure.Presentation;
 
 namespace ExpenseTracker.WinForms.Features.Expenses.Views;
 
@@ -8,14 +8,19 @@ public partial class ExpenseDetailsForm : Form
 {
     private readonly ExpenseResult _expense;
 
+    private readonly DisplayFormatter _displayFormatter;
+
     public ExpenseDetailsForm(
-        ExpenseResult expense)
+        ExpenseResult expense,
+        DisplayFormatter displayFormatter)
     {
         ArgumentNullException.ThrowIfNull(expense);
+        ArgumentNullException.ThrowIfNull(displayFormatter);
 
         InitializeComponent();
 
         _expense = expense;
+        _displayFormatter = displayFormatter;
 
         DisplayExpense();
     }
@@ -35,11 +40,11 @@ public partial class ExpenseDetailsForm : Form
             $"Expense #{entry.ExpenseEntryId}";
 
         dateLabel.Text =
-            FormatExpenseDateTime(
+            _displayFormatter.FormatUtcDateTimeLong(
                 entry.ExpenseDateTime);
 
         totalValueLabel.Text =
-            FormatPeso(entry.TotalCost);
+            _displayFormatter.FormatCurrency(entry.TotalCost);
 
         itemCountValueLabel.Text =
             GetItemCountText(
@@ -94,30 +99,6 @@ public partial class ExpenseDetailsForm : Form
             : $"{itemCount} items";
     }
 
-    private static string FormatExpenseDateTime(
-        DateTime expenseDateTime)
-    {
-        DateTime utcDateTime =
-            expenseDateTime.Kind == DateTimeKind.Utc
-                ? expenseDateTime
-                : DateTime.SpecifyKind(
-                    expenseDateTime,
-                    DateTimeKind.Utc);
-
-        return utcDateTime
-            .ToLocalTime()
-            .ToString(
-                "MMMM d, yyyy h:mm tt");
-    }
-
-    private static string FormatPeso(
-        decimal amount)
-    {
-        return amount.ToString(
-            "C2",
-            CultureInfo.GetCultureInfo("en-PH"));
-    }
-
     private void historicalItemsDataGridView_CellFormatting(
         object? sender,
         DataGridViewCellFormattingEventArgs e)
@@ -149,7 +130,7 @@ public partial class ExpenseDetailsForm : Form
         if (e.ColumnIndex == unitPriceColumn.Index)
         {
             e.Value =
-                FormatPeso(item.UnitPriceSnapshot);
+                _displayFormatter.FormatCurrency(item.UnitPriceSnapshot);
 
             e.FormattingApplied = true;
 
@@ -159,7 +140,7 @@ public partial class ExpenseDetailsForm : Form
         if (e.ColumnIndex == lineTotalColumn.Index)
         {
             e.Value =
-                FormatPeso(item.LineTotal);
+                _displayFormatter.FormatCurrency(item.LineTotal);
 
             e.FormattingApplied = true;
 

@@ -36,6 +36,7 @@ partial class MainForm
         navigationHeaderPanel = new Panel();
         appTitleLabel = new Label();
         contentPanel = new Panel();
+        settingsButton = new Button();
         navigationPanel.SuspendLayout();
         navigationMenuPanel.SuspendLayout();
         navigationHeaderPanel.SuspendLayout();
@@ -54,6 +55,7 @@ partial class MainForm
         // 
         // navigationMenuPanel
         // 
+        navigationMenuPanel.Controls.Add(settingsButton);
         navigationMenuPanel.Controls.Add(expensesButton);
         navigationMenuPanel.Controls.Add(itemsButton);
         navigationMenuPanel.Controls.Add(homeButton);
@@ -150,6 +152,25 @@ partial class MainForm
         contentPanel.Size = new Size(842, 653);
         contentPanel.TabIndex = 1;
         // 
+        // settingsButton
+        // 
+        settingsButton.Cursor = Cursors.Hand;
+        settingsButton.Dock = DockStyle.Top;
+        settingsButton.FlatAppearance.BorderSize = 0;
+        settingsButton.FlatStyle = FlatStyle.Flat;
+        settingsButton.ForeColor = Color.White;
+        settingsButton.Location = new Point(0, 152);
+        settingsButton.Margin = new Padding(0);
+        settingsButton.Name = "settingsButton";
+        settingsButton.Padding = new Padding(24, 0, 0, 0);
+        settingsButton.Size = new Size(240, 50);
+        settingsButton.TabIndex = 7;
+        settingsButton.TabStop = false;
+        settingsButton.Text = "Settings";
+        settingsButton.TextAlign = ContentAlignment.MiddleLeft;
+        settingsButton.UseVisualStyleBackColor = false;
+        settingsButton.Click += settingsButton_Click;
+        // 
         // MainForm
         // 
         AutoScaleDimensions = new SizeF(8F, 20F);
@@ -177,4 +198,5 @@ partial class MainForm
     private Panel navigationMenuPanel;
     private Button expensesButton;
     private Button itemsButton;
+    private Button settingsButton;
 }

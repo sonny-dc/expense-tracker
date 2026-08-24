@@ -1,6 +1,6 @@
-﻿using System.Globalization;
+﻿using ExpenseTracker.WinForms.Features.Expenses.Models;
 
-using ExpenseTracker.WinForms.Features.Expenses.Models;
+using ExpenseTracker.WinForms.Infrastructure.Presentation;
 
 using ItemModel =
     ExpenseTracker.WinForms.Features.Items.Models.Item;
@@ -15,11 +15,17 @@ public partial class RecordExpenseForm : Form
         int,
         SelectedExpenseItemControls> _selectedItems = [];
 
+    private readonly DisplayFormatter _displayFormatter;
+
     public RecordExpenseForm(
-        IReadOnlyList<ItemModel> availableItems)
+        IReadOnlyList<ItemModel> availableItems,
+        DisplayFormatter displayFormatter)
     {
         ArgumentNullException.ThrowIfNull(
             availableItems);
+
+        ArgumentNullException.ThrowIfNull(
+            displayFormatter);
 
         if (availableItems.Count == 0)
         {
@@ -31,6 +37,7 @@ public partial class RecordExpenseForm : Form
         InitializeComponent();
 
         _availableItems = availableItems;
+        _displayFormatter = displayFormatter;
 
         selectedItemsFlowLayoutPanel.ClientSizeChanged +=
             selectedItemsFlowLayoutPanel_ClientSizeChanged;
@@ -260,7 +267,7 @@ public partial class RecordExpenseForm : Form
                 11),
             Size = new Size(115, 23),
             Text =
-                $"Price: {FormatPeso(item.UnitPrice)}"
+                $"Price: {_displayFormatter.FormatCurrency(item.UnitPrice)}"
         };
 
         var lineTotalLabel = new Label
@@ -277,7 +284,7 @@ public partial class RecordExpenseForm : Form
                 rowPanel.Width - 362,
                 37),
             Size = new Size(150, 25),
-            Text = FormatPeso(item.UnitPrice)
+            Text = _displayFormatter.FormatCurrency(item.UnitPrice)
         };
 
         var removeButton = new Button
@@ -380,7 +387,7 @@ public partial class RecordExpenseForm : Form
                 rowPanel.Width - 230,
                 21),
             Size = new Size(120, 25),
-            Text = FormatPeso(item.UnitPrice),
+            Text = _displayFormatter.FormatCurrency(item.UnitPrice),
             TextAlign =
                 ContentAlignment.MiddleRight
         };
@@ -531,7 +538,7 @@ public partial class RecordExpenseForm : Form
                 mode: MidpointRounding.AwayFromZero);
 
         selectedItem.LineTotalLabel.Text =
-            FormatPeso(estimatedLineTotal);
+            _displayFormatter.FormatCurrency(estimatedLineTotal);
     }
 
     private void UpdateEstimatedTotal()
@@ -558,7 +565,7 @@ public partial class RecordExpenseForm : Form
             mode: MidpointRounding.AwayFromZero);
 
         estimatedTotalLabel.Text =
-            $"Estimated total: {FormatPeso(estimatedTotal)}";
+            $"Estimated total: {_displayFormatter.FormatCurrency(estimatedTotal)}";
 
         saveButton.Enabled =
             _selectedItems.Count > 0;
@@ -603,14 +610,6 @@ public partial class RecordExpenseForm : Form
             4;
 
         return Math.Max(width, 320);
-    }
-
-    private static string FormatPeso(
-        decimal amount)
-    {
-        return amount.ToString(
-            "C2",
-            CultureInfo.GetCultureInfo("en-PH"));
     }
 
     private sealed class SelectedExpenseItemControls

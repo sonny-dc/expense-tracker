@@ -3,14 +3,19 @@
 using ExpenseTracker.WinForms.Features.Items.Api;
 using ExpenseTracker.WinForms.Features.Items.Models;
 
+using ExpenseTracker.WinForms.Features.Settings.Services;
+
 using ExpenseTracker.WinForms.Infrastructure.Http;
 using ExpenseTracker.WinForms.Infrastructure.Dialogs;
+using ExpenseTracker.WinForms.Infrastructure.Presentation;
 
 namespace ExpenseTracker.WinForms.Features.Items.Views;
 
 public partial class ItemsView : UserControl
 {
     private readonly ItemsApiClient _itemsApiClient;
+    private readonly DisplaySettingsService _displaySettingsService;
+    private readonly DisplayFormatter _displayFormatter;
 
     private IReadOnlyList<Item> _items = [];
 
@@ -18,11 +23,15 @@ public partial class ItemsView : UserControl
     private bool _isLoading;
 
     public ItemsView(
-        ItemsApiClient itemsApiClient)
+        ItemsApiClient itemsApiClient,
+        DisplaySettingsService displaySettingsService,
+        DisplayFormatter displayFormatter)
     {
         InitializeComponent();
 
         _itemsApiClient = itemsApiClient;
+        _displaySettingsService = displaySettingsService;
+        _displayFormatter = displayFormatter;
 
         Load += ItemsView_Load;
         refreshButton.Click += refreshButton_Click;
@@ -30,8 +39,15 @@ public partial class ItemsView : UserControl
         addItemButton.Click += addItemButton_Click;
         editItemButton.Click += editItemButton_Click;
         deleteItemButton.Click += deleteItemButton_Click;
+
         itemsDataGridView.SelectionChanged +=
             itemsDataGridView_SelectionChanged;
+
+        itemsDataGridView.CellFormatting +=
+            itemsDataGridView_CellFormatting;
+
+        _displaySettingsService.SettingsChanged +=
+            displaySettingsService_SettingsChanged;
     }
 
     private async void ItemsView_Load(
@@ -140,6 +156,39 @@ public partial class ItemsView : UserControl
         EventArgs e)
     {
         UpdateItemActionAvailability();
+    }
+
+    private void itemsDataGridView_CellFormatting(
+        object? sender,
+        DataGridViewCellFormattingEventArgs e)
+    {
+        if (e.RowIndex < 0 ||
+            e.ColumnIndex != unitPriceColumn.Index)
+        {
+            return;
+        }
+
+        DataGridViewRow row =
+            itemsDataGridView.Rows[e.RowIndex];
+
+        if (row.DataBoundItem is not Item item)
+        {
+            return;
+        }
+
+        e.Value =
+            _displayFormatter.FormatCurrency(
+                item.UnitPrice);
+
+        e.FormattingApplied = true;
+    }
+
+    private void displaySettingsService_SettingsChanged(
+        object? sender,
+        EventArgs e)
+    {
+        itemsDataGridView.InvalidateColumn(
+            unitPriceColumn.Index);
     }
 
     private void UpdateItemActionAvailability()
