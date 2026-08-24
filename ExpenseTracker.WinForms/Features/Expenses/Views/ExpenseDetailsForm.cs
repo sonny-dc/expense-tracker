@@ -9,19 +9,26 @@ public partial class ExpenseDetailsForm : Form
     private readonly ExpenseResult _expense;
 
     private readonly DisplayFormatter _displayFormatter;
+    private readonly bool _showRecordedSuccess;
 
     public ExpenseDetailsForm(
         ExpenseResult expense,
-        DisplayFormatter displayFormatter)
+        DisplayFormatter displayFormatter,
+        bool showRecordedSuccess = false)
     {
         ArgumentNullException.ThrowIfNull(expense);
         ArgumentNullException.ThrowIfNull(displayFormatter);
 
         InitializeComponent();
 
+        historicalItemsDataGridView.DataBindingComplete +=
+            historicalItemsDataGridView_DataBindingComplete;
+
         _expense = expense;
         _displayFormatter = displayFormatter;
+        _showRecordedSuccess = showRecordedSuccess;
 
+        ConfigurePresentationMode();
         DisplayExpense();
     }
 
@@ -31,7 +38,9 @@ public partial class ExpenseDetailsForm : Form
             _expense.ExpenseEntry;
 
         Text =
-            $"Expense #{entry.ExpenseEntryId}";
+            _showRecordedSuccess
+            ? "Expense Recorded"
+            : $"Expense #{entry.ExpenseEntryId}";
 
         titleLabel.Text =
             entry.Title;
@@ -54,14 +63,25 @@ public partial class ExpenseDetailsForm : Form
             _expense.ExpenseItems.Count(
                 item => item.ItemId is null);
 
-        sourceStatusValueLabel.Text =
-            GetSourceStatusText(
-                deletedSourceCount);
+        if (_showRecordedSuccess)
+        {
+            sourceStatusValueLabel.Text =
+                "Saved";
 
-        sourceStatusValueLabel.ForeColor =
-            deletedSourceCount == 0
-                ? Color.Green
-                : Color.DarkOrange;
+            sourceStatusValueLabel.ForeColor =
+                Color.Green;
+        }
+        else
+        {
+            sourceStatusValueLabel.Text =
+                GetSourceStatusText(
+                    deletedSourceCount);
+
+            sourceStatusValueLabel.ForeColor =
+                deletedSourceCount == 0
+                    ? Color.Green
+                    : Color.DarkOrange;
+        }
 
         notesTextBox.Text =
             string.IsNullOrWhiteSpace(entry.Notes)
@@ -73,6 +93,46 @@ public partial class ExpenseDetailsForm : Form
 
         historicalItemsDataGridView.ClearSelection();
         historicalItemsDataGridView.CurrentCell = null;
+    }
+
+    private void historicalItemsDataGridView_DataBindingComplete(
+        object? sender,
+        DataGridViewBindingCompleteEventArgs e)
+    {
+        historicalItemsDataGridView.ClearSelection();
+        historicalItemsDataGridView.CurrentCell = null;
+    }
+
+    private void ConfigurePresentationMode()
+    {
+        if (!_showRecordedSuccess)
+        {
+            return;
+        }
+
+        headerPanel.BackColor =
+            Color.FromArgb(232, 245, 233);
+
+        sourceStatusCaptionLabel.Text =
+            "RECORD STATUS";
+
+        sourceStatusValueLabel.Text =
+            "Saved";
+
+        sourceStatusValueLabel.ForeColor =
+            Color.Green;
+
+        historicalItemsLabel.Text =
+            "Backend-Confirmed Item Details";
+
+        historicalNoticeLabel.Text =
+            "The API calculated and saved these quantities, snapshots, and totals.";
+
+        snapshotNoticeLabel.Text =
+            "Final totals and historical item snapshots were confirmed by the API.";
+
+        closeButton.Text =
+            "Done";
     }
 
     private static string GetSourceStatusText(
@@ -152,14 +212,24 @@ public partial class ExpenseDetailsForm : Form
             bool sourceDeleted =
                 item.ItemId is null;
 
-            e.Value = sourceDeleted
-                ? "Deleted"
-                : "Available";
-
-            e.CellStyle.ForeColor =
+            Color statusColor =
                 sourceDeleted
                     ? Color.Firebrick
                     : Color.Green;
+
+            e.Value =
+                sourceDeleted
+                    ? "Deleted"
+                    : "Available";
+
+            e.CellStyle.ForeColor =
+                statusColor;
+
+            e.CellStyle.SelectionForeColor =
+                statusColor;
+
+            e.CellStyle.SelectionBackColor =
+                Color.White;
 
             e.CellStyle.Font = new Font(
                 historicalItemsDataGridView.Font,

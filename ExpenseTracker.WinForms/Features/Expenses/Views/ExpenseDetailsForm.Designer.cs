@@ -666,6 +666,10 @@ partial class ExpenseDetailsForm
         notesTextBox.BorderStyle =
             BorderStyle.None;
 
+        notesTextBox.Cursor = Cursors.Default;
+
+        notesTextBox.ShortcutsEnabled = false;
+
         notesTextBox.Location =
             new Point(18, 44);
 
@@ -771,6 +775,45 @@ partial class ExpenseDetailsForm
 
         historicalItemsDataGridView.AutoGenerateColumns =
             false;
+
+        historicalItemsDataGridView.ColumnHeadersBorderStyle =
+            DataGridViewHeaderBorderStyle.None;
+            
+        historicalItemsDataGridView.CellBorderStyle =
+            DataGridViewCellBorderStyle.SingleHorizontal;
+        historicalItemsDataGridView.GridColor =
+            Color.FromArgb(225, 228, 232);
+
+        historicalItemsDataGridView.DefaultCellStyle =
+            new DataGridViewCellStyle
+            {
+                BackColor = Color.White,
+                ForeColor = Color.FromArgb(32, 40, 48),
+                SelectionBackColor = Color.White,
+                SelectionForeColor = Color.FromArgb(32, 40, 48)
+            };
+
+        historicalItemsDataGridView.EnableHeadersVisualStyles =
+            false;
+
+        historicalItemsDataGridView.ColumnHeadersDefaultCellStyle =
+            new DataGridViewCellStyle
+            {
+                Alignment =
+                    DataGridViewContentAlignment.MiddleLeft,
+                BackColor =
+                    Color.FromArgb(245, 247, 250),
+                ForeColor =
+                    Color.FromArgb(32, 40, 48),
+                SelectionBackColor =
+                    Color.FromArgb(245, 247, 250),
+                SelectionForeColor =
+                    Color.FromArgb(32, 40, 48),
+                Font = new Font(
+                    "Segoe UI",
+                    9F,
+                    FontStyle.Bold)
+            };
 
         historicalItemsDataGridView.AutoSizeColumnsMode =
             DataGridViewAutoSizeColumnsMode.Fill;

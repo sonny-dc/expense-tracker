@@ -276,14 +276,13 @@ public partial class ExpensesView : UserControl
 
             DisplayExpenses();
 
-            MessageBox.Show(
-                this,
-                $"Expense #{createdExpense.ExpenseEntry.ExpenseEntryId} " +
-                $"was recorded successfully.\n\n" +
-                $"Final total: {_displayFormatter.FormatCurrency(createdExpense.ExpenseEntry.TotalCost)}",
-                "Expense Recorded",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+            using var expenseResultForm =
+                new ExpenseDetailsForm(
+                    createdExpense,
+                    _displayFormatter,
+                    showRecordedSuccess: true);
+
+            expenseResultForm.ShowDialog(this);
         }
         catch (ApiClientException exception)
         {

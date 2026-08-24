@@ -199,10 +199,12 @@ partial class ItemsView
         itemsDataGridView.AllowUserToDeleteRows = false;
         itemsDataGridView.AllowUserToResizeRows = false;
         itemsDataGridView.AutoGenerateColumns = false;
+        itemsDataGridView.ColumnHeadersBorderStyle =
+            DataGridViewHeaderBorderStyle.None;
         itemsDataGridView.AutoSizeColumnsMode =
             DataGridViewAutoSizeColumnsMode.Fill;
         itemsDataGridView.BackgroundColor = Color.White;
-        itemsDataGridView.BorderStyle = BorderStyle.Fixed3D;
+        itemsDataGridView.BorderStyle = BorderStyle.FixedSingle;
         itemsDataGridView.ColumnHeadersHeight = 42;
         itemsDataGridView.ColumnHeadersHeightSizeMode =
             DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
@@ -211,6 +213,28 @@ partial class ItemsView
             codeColumn,
             brandColumn,
             unitPriceColumn);
+
+        itemsDataGridView.EnableHeadersVisualStyles = false;
+
+        itemsDataGridView.ColumnHeadersDefaultCellStyle =
+            new DataGridViewCellStyle
+            {
+                Alignment =
+                    DataGridViewContentAlignment.MiddleLeft,
+                BackColor =
+                    Color.FromArgb(245, 247, 250),
+                ForeColor =
+                    Color.FromArgb(32, 40, 48),
+                SelectionBackColor =
+                    Color.FromArgb(245, 247, 250),
+                SelectionForeColor =
+                    Color.FromArgb(32, 40, 48),
+                Font = new Font(
+                    "Segoe UI",
+                    9F,
+                    FontStyle.Bold)
+            };
+
         itemsDataGridView.Dock = DockStyle.Fill;
         itemsDataGridView.Location = new Point(27, 179);
         itemsDataGridView.MultiSelect = false;
@@ -223,6 +247,10 @@ partial class ItemsView
             DataGridViewSelectionMode.FullRowSelect;
         itemsDataGridView.Size = new Size(788, 411);
         itemsDataGridView.TabIndex = 2;
+        itemsDataGridView.CellBorderStyle =
+            DataGridViewCellBorderStyle.SingleHorizontal;
+        itemsDataGridView.GridColor =
+            Color.FromArgb(225, 228, 232);
         // 
         // nameColumn
         // 
