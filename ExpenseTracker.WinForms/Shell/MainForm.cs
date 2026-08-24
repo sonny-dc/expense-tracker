@@ -21,6 +21,10 @@ public partial class MainForm : Form
         _itemsView = itemsView;
         _expensesView = expensesView;
 
+        AddView(_homeView);
+        AddView(_itemsView);
+        AddView(_expensesView);
+
         ShowView(_homeView);
         SetActiveButton(homeButton);
     }
@@ -49,14 +53,15 @@ public partial class MainForm : Form
         SetActiveButton(expensesButton);
     }
 
-    private void ShowView(UserControl view)
+    private static void ShowView(UserControl view)
     {
-        contentPanel.Controls.Clear();
-
-        view.Dock = DockStyle.Fill;
-
-        contentPanel.Controls.Add(view);
         view.BringToFront();
+    }
+
+    private void AddView(UserControl view)
+    {
+        view.Dock = DockStyle.Fill;
+        contentPanel.Controls.Add(view);
     }
 
     private void SetActiveButton(Button activeButton)
