@@ -8,6 +8,10 @@ using ExpenseTracker.WinForms.Features.Expenses.Views;
 using ExpenseTracker.WinForms.Features.Home.Views;
 using ExpenseTracker.WinForms.Features.Items.Views;
 
+using ExpenseTracker.WinForms.Features.Home.BudgetAccounts;
+using ExpenseTracker.WinForms.Features.Home.ExpenseSummary;
+using ExpenseTracker.WinForms.Features.Home.RecentExpenses;
+
 using ExpenseTracker.WinForms.Features.Settings.Models;
 using ExpenseTracker.WinForms.Features.Settings.Views;
 using ExpenseTracker.WinForms.Features.Settings.Services;
@@ -51,6 +55,10 @@ internal static class Program
 
         builder.Services.AddSingleton<DisplaySettingsService>();
         builder.Services.AddSingleton<DisplayFormatter>();
+
+        builder.Services.AddSingleton<BudgetAccountsPanel>();
+        builder.Services.AddSingleton<ExpenseSummaryPanel>();
+        builder.Services.AddSingleton<RecentExpensesPanel>();
 
         builder.Services.AddSingleton<HomeView>();
         builder.Services.AddSingleton<ItemsView>();

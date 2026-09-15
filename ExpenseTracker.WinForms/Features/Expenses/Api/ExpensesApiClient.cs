@@ -11,6 +11,8 @@ public sealed class ExpensesApiClient
 {
     private const string ExpensesRoute = "expenses";
 
+    private const string ExpenseEntriesRoute = $"{ExpensesRoute}/entries";
+
     private readonly IHttpClientFactory _httpClientFactory;
 
     public ExpensesApiClient(
@@ -72,9 +74,33 @@ public sealed class ExpensesApiClient
                 "The API response did not contain a valid expense.");
     }
 
+    public async Task<ExpenseEntrySummary> GetSummaryAsync(
+        CancellationToken cancellationToken = default)
+    {
+        HttpClient httpClient =
+            _httpClientFactory.CreateApiClient();
+
+        using HttpResponseMessage response =
+            await httpClient.GetAsync(
+                $"{ExpenseEntriesRoute}/summary",
+                cancellationToken);
+
+        await response.EnsureApiSuccessAsync(
+            cancellationToken);
+
+        ExpenseEntrySummary? summary =
+            await response.Content.ReadFromJsonAsync<
+                ExpenseEntrySummary>(
+                    cancellationToken);
+
+        return summary
+            ?? throw new JsonException(
+                "The API response did not contain a valid expense summary.");
+    }
+
     public async Task<ExpenseResult> CreateAsync(
         CreateExpenseRequest request,
-    CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
 
