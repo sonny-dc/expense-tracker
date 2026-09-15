@@ -27,7 +27,7 @@ public sealed class ExpensesController : ControllerBase
     public async Task<ActionResult<IReadOnlyList<ExpenseResult>>> GetAllAsync(
         CancellationToken cancellationToken)
     {
-        IReadOnlyList<ExpenseResult> expenses = 
+        IReadOnlyList<ExpenseResult> expenses =
             await _expenseService.GetAllAsync(cancellationToken);
 
         return Ok(expenses);
@@ -50,11 +50,11 @@ public sealed class ExpensesController : ControllerBase
         [FromBody] CreateExpenseRequest request,
         CancellationToken cancellationToken)
     {
-        ValidationResult validationResult = 
+        ValidationResult validationResult =
             await _createExpenseRequestValidator.ValidateAsync(
                 request,
                 cancellationToken);
-        
+
         if (!validationResult.IsValid)
         {
             return BadRequest(validationResult.ToDictionary());
