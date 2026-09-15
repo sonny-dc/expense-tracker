@@ -90,7 +90,7 @@ public sealed class ExpenseEntryRepository
                 @Notes
             );
         """;
-        
+
         return await _databaseExecutor.ExecuteAsync(
             async (connection, transaction) =>
             {
@@ -105,6 +105,28 @@ public sealed class ExpenseEntryRepository
                     transaction: transaction,
                     cancellationToken: cancellationToken);
                 return await connection.QuerySingleAsync<ExpenseEntry>(command);
+            }
+        );
+    }
+
+    public async Task<ExpenseEntrySummary> GetSummaryAsync(
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT
+                COUNT(*) AS ExpenseCount,
+                COALESCE(SUM(TotalCost), 0) AS TotalCost
+            FROM dbo.ExpenseEntries;
+        """;
+
+        return await _databaseExecutor.ExecuteAsync(
+            async (connection, transaction) =>
+            {
+                var command = new CommandDefinition(
+                    commandText: sql,
+                    transaction: transaction,
+                    cancellationToken: cancellationToken);
+                return await connection.QuerySingleAsync<ExpenseEntrySummary>(command);
             }
         );
     }

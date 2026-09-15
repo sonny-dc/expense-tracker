@@ -5,4 +5,5 @@
     <Build />
     <Deploy />
   </Project>
+  <Project Path="ExpenseTracker.WinForms/ExpenseTracker.WinForms.csproj" Id="d6ac25b0-f0e6-4ab5-b8c0-a01e1cbc33f6" />
 </Solution>

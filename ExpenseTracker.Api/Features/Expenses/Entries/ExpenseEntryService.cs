@@ -39,4 +39,11 @@ public sealed class ExpenseEntryService
             input,
             cancellationToken);
     }
+
+    public async Task<ExpenseEntrySummary> GetSummaryAsync(
+        CancellationToken cancellationToken = default)
+    {
+        return await _expenseEntryRepository.GetSummaryAsync(
+            cancellationToken);
+    }
 }
