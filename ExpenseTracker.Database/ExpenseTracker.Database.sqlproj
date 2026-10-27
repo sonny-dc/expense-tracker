@@ -60,6 +60,8 @@
   </ItemGroup>
   <ItemGroup>
     <Build Include="Tables\Items.sql" />
+    <Build Include="Tables\BudgetAccountLogs.sql" />
+    <Build Include="Tables\BudgetAccounts.sql" />
   </ItemGroup>
   <ItemGroup>
     <Build Include="Tables\ExpenseItems.sql" />
