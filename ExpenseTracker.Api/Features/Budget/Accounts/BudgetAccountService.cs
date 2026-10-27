@@ -28,7 +28,8 @@ public sealed class BudgetAccountService
 
         if (budgetAccount is null)
         {
-            throw new BudgetAccountNotFoundException();
+            throw new BudgetAccountNotFoundException(
+                $"Budget account with ID {budgetAccountId} was not found.");
         }
         return budgetAccount;
     }
@@ -42,12 +43,12 @@ public sealed class BudgetAccountService
             cancellationToken);
     }
 
+    // NOTE: I prefer calling this function after verifying the existence of the budget account.
     public async Task<BudgetAccount> UpdateAsync(
         int budgetAccountId,
         UpdateBudgetAccountRequest request,
         CancellationToken cancellationToken = default)
     {
-        await GetByIdAsync(budgetAccountId, cancellationToken);
         bool isUpdated = await _budgetAccountRepository.UpdateAsync(
             budgetAccountId,
             request,
@@ -76,6 +77,28 @@ public sealed class BudgetAccountService
         {
             throw new InvalidOperationException(
                 $"Failed to delete the budget account {budgetAccountId} after existence verification.");
+        }
+    }
+
+    public void EnsureBudgetAccountStatus(
+        BudgetAccount budgetAccount,
+        BudgetAccountStatus expectedStatus,
+        params BudgetAccountStatus[] additionalExpectedStatuses)
+    {
+        bool isExpectedStatus =
+            budgetAccount.Status == expectedStatus ||
+            additionalExpectedStatuses.Contains(budgetAccount.Status);
+
+        if (!isExpectedStatus)
+        {
+            string expectedStatuses =
+                string.Join(
+                    ", ",
+                    new[] { expectedStatus }
+                        .Concat(additionalExpectedStatuses));
+
+            throw new BudgetAccountStatusMismatchException(
+                $"Budget account {budgetAccount.BudgetAccountId} has status {budgetAccount.Status}, expected {expectedStatuses}.");
         }
     }
 }

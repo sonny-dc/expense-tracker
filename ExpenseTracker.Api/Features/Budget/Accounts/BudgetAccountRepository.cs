@@ -21,9 +21,9 @@ public sealed class BudgetAccountRepository
                 Name,
                 Description,
                 Balance,
-                Status
+                Status,
                 CreatedDateTime,
-                LastUpdateDateTime
+                LastUpdatedDateTime
             FROM BudgetAccounts
             ORDER BY Name ASC;
         """;
@@ -90,7 +90,7 @@ public sealed class BudgetAccountRepository
                 INSERTED.Balance,
                 INSERTED.Status,
                 INSERTED.CreatedDateTime,
-                INSERTED.LastUpdateDateTime
+                INSERTED.LastUpdatedDateTime
             VALUES
             (
                 @Name,
@@ -110,7 +110,7 @@ public sealed class BudgetAccountRepository
                         Name = request.Name,
                         Description = request.Description,
                         Balance = request.Balance,
-                        Status = BudgetAccountStatus.Open
+                        Status = BudgetAccountStatus.Open.ToString()
                     },
                     transaction: transaction,
                     cancellationToken: cancellationToken);
@@ -130,7 +130,8 @@ public sealed class BudgetAccountRepository
                 Name = COALESCE(@Name, Name),
                 Description = COALESCE(@Description, Description),
                 Balance = COALESCE(@Balance, Balance),
-                Status = COALESCE(@Status, Status)
+                Status = COALESCE(@Status, Status),
+                LastUpdatedDateTime = SYSUTCDATETIME()
             WHERE BudgetAccountId = @BudgetAccountId;
         """;
 
@@ -142,10 +143,10 @@ public sealed class BudgetAccountRepository
                     parameters: new
                     {
                         BudgetAccountId = budgetAccountId,
-                        request.Name,
-                        request.Description,
-                        request.Balance,
-                        request.Status
+                        Name = request.Name,
+                        Description = request.Description,
+                        Balance = request.Balance,
+                        Status = request.Status?.ToString()
                     },
                     transaction: transaction,
                     cancellationToken: cancellationToken);

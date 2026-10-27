@@ -1,8 +1,5 @@
-using FluentValidation;
-
 using ExpenseTracker.Api.Features.Expenses.Entries;
 using ExpenseTracker.Api.Features.Expenses.Items;
-using ExpenseTracker.Api.Features.Expenses.Validators;
 
 namespace ExpenseTracker.Api.Features.Expenses;
 
@@ -21,9 +18,6 @@ public static class ExpenseServiceExtensions
 
         // Main Expense
         services.AddScoped<ExpenseService>();
-
-        services.AddValidatorsFromAssemblyContaining<
-            CreateExpenseRequestValidator>();
 
         return services;
     }

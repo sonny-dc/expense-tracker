@@ -26,7 +26,8 @@ public sealed class ExpenseEntryService
             cancellationToken);
         if (expenseEntry is null)
         {
-            throw new ExpenseEntryNotFoundException();
+            throw new ExpenseEntryNotFoundException(
+                $"Expense entry with ID {expenseEntryId} was not found.");
         }
         return expenseEntry;
     }

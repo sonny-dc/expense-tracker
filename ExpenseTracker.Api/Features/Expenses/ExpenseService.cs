@@ -2,6 +2,7 @@ using ExpenseTracker.Api.Features.Expenses.Entries;
 using ExpenseTracker.Api.Features.Expenses.Items;
 using ExpenseTracker.Api.Features.Expenses.Items.Requests;
 using ExpenseTracker.Api.Features.Items;
+using ExpenseTracker.Api.Features.Budget;
 
 using ExpenseTracker.Api.Features.Expenses.Requests;
 
@@ -14,17 +15,20 @@ public sealed class ExpenseService
     private readonly ItemService _itemService;
     private readonly ExpenseEntryService _expenseEntryService;
     private readonly ExpenseItemService _expenseItemService;
+    private readonly BudgetService _budgetService;
     private readonly TransactionManager _transactionManager;
 
     public ExpenseService(
         ItemService itemService,
         ExpenseEntryService expenseEntryService,
         ExpenseItemService expenseItemService,
+        BudgetService budgetService,
         TransactionManager transactionManager)
     {
         _itemService = itemService;
         _expenseEntryService = expenseEntryService;
         _expenseItemService = expenseItemService;
+        _budgetService = budgetService;
         _transactionManager = transactionManager;
     }
 
@@ -45,18 +49,18 @@ public sealed class ExpenseService
                 .Select(entry => entry.ExpenseEntryId)
                 .ToArray();
 
-            IReadOnlyList<ExpenseItem> expenseItems = 
+            IReadOnlyList<ExpenseItem> expenseItems =
                 await _expenseItemService.GetAllByExpenseEntryIdsAsync(
-                    expenseEntryIds, 
+                    expenseEntryIds,
                     cancellationToken);
 
-            Dictionary<int, List<ExpenseItem>> expenseItemsByEntryId = 
+            Dictionary<int, List<ExpenseItem>> expenseItemsByEntryId =
                 expenseItems
                     .GroupBy(item => item.ExpenseEntryId)
                     .ToDictionary(
                         group => group.Key,
                         group => group.ToList());
-            
+
             var results = new List<ExpenseResult>(expenseEntries.Count);
 
             foreach (ExpenseEntry expenseEntry in expenseEntries)
@@ -83,25 +87,25 @@ public sealed class ExpenseService
             ExpenseEntry expenseEntry = await _expenseEntryService.GetByIdAsync(
                 expenseEntryId,
                 cancellationToken);
-            
-            IReadOnlyList<ExpenseItem> expenseItems = 
+
+            IReadOnlyList<ExpenseItem> expenseItems =
                 await _expenseItemService.GetAllByExpenseEntryIdAsync(
                     expenseEntry.ExpenseEntryId,
                     cancellationToken);
-                
+
             return new ExpenseResult(expenseEntry, expenseItems);
-            
+
         }, cancellationToken);
     }
 
     public async Task<ExpenseResult> CreateAsync(
-        CreateExpenseRequest input,
+        CreateExpenseRequest request,
         CancellationToken cancellationToken = default)
     {
         return await _transactionManager.ExecuteAsync(async () =>
         {
-            IReadOnlyList<NormalizedExpenseItem> normalizedExpenseItems = 
-                NormalizeExpenseItems(input.Items);
+            IReadOnlyList<NormalizedExpenseItem> normalizedExpenseItems =
+                NormalizeExpenseItems(request.Items);
 
             int[] itemIds = normalizedExpenseItems
                 .Select(item => item.ItemId)
@@ -114,7 +118,7 @@ public sealed class ExpenseService
             Dictionary<int, Item> itemsById = items
                 .ToDictionary(item => item.ItemId);
 
-            var preparedExpenseItems = 
+            var preparedExpenseItems =
                 new List<PreparedExpenseItem>(normalizedExpenseItems.Count);
 
             decimal totalCost = 0m;
@@ -122,9 +126,9 @@ public sealed class ExpenseService
             foreach (NormalizedExpenseItem normalizedExpenseItem in normalizedExpenseItems)
             {
                 Item item = itemsById[normalizedExpenseItem.ItemId];
-                
+
                 decimal lineTotal = Math.Round(
-                    item.UnitPrice * normalizedExpenseItem.Quantity, 
+                    item.UnitPrice * normalizedExpenseItem.Quantity,
                     decimals: 2,
                     mode: MidpointRounding.AwayFromZero);
 
@@ -137,24 +141,24 @@ public sealed class ExpenseService
             }
 
             totalCost = Math.Round(
-                totalCost, 
-                decimals: 2, 
+                totalCost,
+                decimals: 2,
                 mode: MidpointRounding.AwayFromZero);
 
             ExpenseEntry expenseEntry = await _expenseEntryService.CreateAsync(
                 new CreateExpenseEntryInput
                 {
-                    Title = input.Title,
+                    Title = request.Title,
                     TotalCost = totalCost,
-                    Notes = input.Notes
+                    Notes = request.Notes
                 },
                 cancellationToken);
-            
+
             var expenseItems = new List<ExpenseItem>(preparedExpenseItems.Count);
 
             foreach (PreparedExpenseItem preparedExpenseItem in preparedExpenseItems)
             {
-                ExpenseItem expenseItem = 
+                ExpenseItem expenseItem =
                     await _expenseItemService.CreateAsync(
                         new CreateExpenseItemInput
                         {
@@ -172,8 +176,20 @@ public sealed class ExpenseService
                 expenseItems.Add(expenseItem);
             }
 
+            if (request.BudgetAccountId is int budgetAccountId)
+            {
+                await _budgetService.RecordExpenseAsync(
+                    new BudgetExpenseInput
+                    {
+                        BudgetAccountId = budgetAccountId,
+                        ExpenseEntryId = expenseEntry.ExpenseEntryId,
+                        Amount = totalCost
+                    }
+                );
+            }
+
             return new ExpenseResult(expenseEntry, expenseItems);
-            
+
         }, cancellationToken);
     }
 

@@ -8,5 +8,5 @@ public sealed class BudgetAccount
     public decimal Balance { get; set; }
     public BudgetAccountStatus Status { get; set; }
     public DateTime CreatedDateTime { get; set; }
-    public DateTime LastUpdateDateTime { get; set; }
+    public DateTime LastUpdatedDateTime { get; set; }
 }

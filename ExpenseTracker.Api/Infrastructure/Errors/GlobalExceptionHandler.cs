@@ -3,8 +3,19 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ExpenseTracker.Api.Infrastructure.Errors;
 
+/// <summary>
+/// Global exception handler that catches unhandled exceptions and returns a standardized error response.
+/// It implements the IExceptionHandler interface, which defines a method for handling exceptions.
+/// The handler checks if the exception is a known ApiException and creates a ProblemDetails response accordingly.
+/// If the exception is not known, it creates a generic ProblemDetails response for unexpected errors.
+/// </summary>
 public sealed class GlobalExceptionHandler : IExceptionHandler
 {
+
+    // Category Name / Class Name in ILogger<out TCategoryName> is used 
+    // to create a logger for this class. This is a common practice 
+    // in .NET applications to provide context for log messages 
+    // on which class they originate from when they are logged.
     private readonly ILogger<GlobalExceptionHandler> _logger;
 
     public GlobalExceptionHandler(
@@ -25,6 +36,14 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             problemDetails = CreateKnownProblemDetails(
                 httpContext,
                 apiException);
+
+            _logger.LogWarning(
+                exception,
+                "A known error occurred while processing " +
+                "{Method} {Path}. Trace Identifier {TraceId}",
+                httpContext.Request.Method,
+                httpContext.Request.Path,
+                httpContext.TraceIdentifier);
         }
         else
         {
@@ -40,15 +59,15 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
                 httpContext);
         }
 
-        httpContext.Response.StatusCode = 
-            problemDetails.Status 
+        httpContext.Response.StatusCode =
+            problemDetails.Status
             ?? StatusCodes.Status500InternalServerError;
 
         await httpContext.Response.WriteAsJsonAsync(
             problemDetails,
             cancellationToken);
 
-        return true;
+        return true; // returns true to indicate that the exception has been handled and no further processing is needed.
     }
 
     private static ProblemDetails CreateKnownProblemDetails(
@@ -59,10 +78,10 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
         {
             Status = apiException.StatusCode,
             Title = apiException.Title,
-            Detail = apiException.Message,
+            Detail = apiException.Detail,
             Instance = httpContext.Request.Path
         };
-        problemDetails.Extensions["traceId"] = 
+        problemDetails.Extensions["traceId"] =
             httpContext.TraceIdentifier;
 
         return problemDetails;
@@ -78,7 +97,7 @@ public sealed class GlobalExceptionHandler : IExceptionHandler
             Detail = "An unexpected error occurred while processing the request.",
             Instance = httpContext.Request.Path
         };
-        problemDetails.Extensions["traceId"] = 
+        problemDetails.Extensions["traceId"] =
             httpContext.TraceIdentifier;
 
         return problemDetails;

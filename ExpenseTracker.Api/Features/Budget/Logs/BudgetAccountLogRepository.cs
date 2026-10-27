@@ -153,7 +153,7 @@ public sealed class BudgetAccountLogRepository
                         Amount = input.Amount,
                         BalanceBefore = input.BalanceBefore,
                         BalanceAfter = input.BalanceAfter,
-                        LogType = input.LogType
+                        LogType = input.LogType.ToString()
                     },
                     transaction: transaction,
                     cancellationToken: cancellationToken);

@@ -4,7 +4,6 @@ namespace ExpenseTracker.Api.Features.Expenses.Entries;
 
 [ApiController]
 [Route("expenses/[controller]")]
-
 public sealed class EntriesController : ControllerBase
 {
     private readonly ExpenseEntryService _expenseEntryService;

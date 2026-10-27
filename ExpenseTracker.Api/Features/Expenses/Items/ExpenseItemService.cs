@@ -16,7 +16,7 @@ public sealed class ExpenseItemService
         CancellationToken cancellationToken = default)
     {
         return await _expenseItemRepository.GetAllByExpenseEntryIdAsync(
-            expenseEntryId, 
+            expenseEntryId,
             cancellationToken);
     }
 
@@ -32,7 +32,7 @@ public sealed class ExpenseItemService
         }
 
         return await _expenseItemRepository.GetAllByExpenseEntryIdsAsync(
-            distinctExpenseEntryIds, 
+            distinctExpenseEntryIds,
             cancellationToken);
     }
 
@@ -45,7 +45,8 @@ public sealed class ExpenseItemService
             cancellationToken);
         if (expenseItem is null)
         {
-            throw new ExpenseItemNotFoundException();
+            throw new ExpenseItemNotFoundException(
+                $"Expense item with ID {expenseItemId} was not found.");
         }
         return expenseItem;
     }

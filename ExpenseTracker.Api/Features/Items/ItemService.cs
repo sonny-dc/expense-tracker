@@ -26,7 +26,8 @@ public class ItemService
             cancellationToken);
         if (item is null)
         {
-            throw new ItemNotFoundException();
+            throw new ItemNotFoundException(
+                $"Item with ID {itemId} was not found.");
         }
         return item;
     }
@@ -48,7 +49,17 @@ public class ItemService
 
         if (items.Count != distinctItemIds.Length)
         {
-            throw new ItemNotFoundException("One or more items were not found.");
+            int[] foundItemIds = items
+                .Select(item => item.ItemId)
+                .ToArray();
+
+            int[] missingItemIds = distinctItemIds
+                .Except(foundItemIds)
+                .ToArray();
+
+            throw new ItemNotFoundException(
+                $"The following item IDs were not found: {string.Join(", ", missingItemIds)}.",
+                "One or more requested items were not found.");
         }
 
         return items;
@@ -67,7 +78,8 @@ public class ItemService
 
         if (alreadyExists)
         {
-            throw new DuplicateItemException();
+            throw new DuplicateItemException(
+                $"An item with the same name, code, and brand already exists: Name={request.Name}, Code={request.Code}, Brand={request.Brand}.");
         }
 
         return await _itemRepository.CreateAsync(
@@ -96,7 +108,8 @@ public class ItemService
 
         if (alreadyExists)
         {
-            throw new DuplicateItemException();
+            throw new DuplicateItemException(
+                $"An item with the same name, code, and brand already exists: Name={effectiveName}, Code={effectiveCode}, Brand={effectiveBrand}.");
         }
 
         bool wasUpdated = await _itemRepository.UpdateAsync(
@@ -106,11 +119,12 @@ public class ItemService
 
         if (!wasUpdated)
         {
-            throw new ItemNotFoundException();
+            throw new ItemNotFoundException(
+                $"Item with ID {itemId} was not found during update.");
         }
 
         return await GetByIdAsync(
-            itemId, 
+            itemId,
             cancellationToken);
     }
 
@@ -124,7 +138,8 @@ public class ItemService
 
         if (!wasDeleted)
         {
-            throw new ItemNotFoundException();
+            throw new ItemNotFoundException(
+                $"Item with ID {itemId} was not found during deletion.");
         }
     }
 }
