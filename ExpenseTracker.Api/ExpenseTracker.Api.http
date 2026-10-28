@@ -2,6 +2,7 @@
 
 @MissingItemId = 2147483647
 @MissingExpenseEntryId = 2147483647
+@MissingBudgetAccountId = 2147483647
 
 ###
 # Health check through an existing endpoint
@@ -419,6 +420,131 @@ Accept: application/json
 
 
 ###
+# Create a budget account
+#
+# Returns the new budget account ID and the initial balance.
+# @name createBudgetAccount
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "Name": "Test Budget Account {{$guid}}",
+  "Description": "This is a test budget account created through the HTTP file.",
+  "Balance": 1000.00
+}
+
+
+###
+# Create a budget account with incorrect property names
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "Name": "Test Budget Account {{$guid}}",
+  "Description": "This is a test budget account created through the HTTP file.",
+  "Balnce": 1000.00
+}
+
+
+###
+# Create a budget account with extra properties that don't exist in the model
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Test Budget Account {{$guid}}",
+  "description": "This is a test budget account created through the HTTP file.",
+  "Balance": 1000.00,
+  "extraProperty": "unexpected value"
+}
+
+
+###
+# Retrieve all budget accounts
+#
+# Expected: The list of budget accounts, including the one created above.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Accept: application/json
+
+
+###
+# Create an expense with an associated budget account
+#
+# Expected: The expense
+# @name createExpenseWithBudgetAccount
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Office Supplies with Budget Account",
+  "notes": "HTTP file expense creation test with budget account",
+  "budgetAccountId": {{createBudgetAccount.response.body.$.budgetAccountId}},
+  "items": [
+    {
+      "itemId": {{createBondPaper.response.body.$.itemId}},
+      "quantity": 2.000
+    }
+  ]
+}
+
+
+###
+# Retrieve the BudgetAccountLog associated with the expense created above
+#
+# Expected: The budget account log entry for the expense, including the
+# budget account ID, expense entry ID, and the amount deducted from the budget account.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/expense-entries/{{createExpenseWithBudgetAccount.response.body.$.expenseEntry.expenseEntryId}}
+Accept: application/json
+
+###
+# Retrieve the budget account logs based on the budget account ID
+#
+# Expected: The budget account log entry for the expense, including the
+# budget account ID, expense entry ID, and the amount deducted from the budget account.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Update the budget account balance to 5000
+#
+# Expected: The updated budget account with the new balance of 5000.00.
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "balance": 5000.00
+}
+
+
+###
+# Get the log entries for the budget account after updating the balance
+#
+# Expected: The budget account log entry for the balance update, including the
+# 'Adjustment' logType, budget account ID, the new balance, and the timestamp of the update.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs
+Accept: application/json
+
+
+###
 # Delete the first catalog item
 #
 # Existing expense-item snapshots should remain.
@@ -461,11 +587,526 @@ Accept: application/json
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
 Accept: application/json
 
-###
 
+###
 # Retrieve the expense summary
 #
 # Returns the total number of expenses and the total cost of all expenses.
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/entries/summary
+Accept: application/json
+
+
+###
+# Retrieve the created budget account by ID
+#
+# Expected: The created budget account with its current balance, status,
+# description, and timestamps.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Update the budget account name, description, and status
+#
+# Expected: The updated budget account with the new name, description,
+# and Archived status. The balance should remain unchanged.
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Updated Test Budget Account",
+  "description": "Updated through the HTTP file.",
+  "status": "Archived"
+}
+
+
+###
+# Retrieve the budget account after updating its metadata and status
+#
+# Expected:
+# - Name is Updated Test Budget Account
+# - Description is Updated through the HTTP file.
+# - Status is Archived
+# - Balance remains unchanged
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Retrieve the budget account logs after updating metadata and status
+#
+# Expected: No additional Adjustment log should be created because the
+# balance was not changed by the previous request.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Validation failure: empty budget account name
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "",
+  "description": "Empty budget account name test.",
+  "balance": 1000.00
+}
+
+
+###
+# Validation failure: budget account name exceeds 100 characters
+#
+# The name below contains 101 characters.
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "description": "Budget account name length test.",
+  "balance": 1000.00
+}
+
+
+###
+# Validation failure: budget account description exceeds 500 characters
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Description Length Test",
+  "description": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "balance": 1000.00
+}
+
+
+###
+# Validation failure: budget account balance has more than two decimal places
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Balance Scale Test",
+  "description": "Budget account balance scale test.",
+  "balance": 1000.123
+}
+
+
+###
+# Create a budget account with a negative starting balance
+#
+# Negative balances are supported by the current business rules.
+# Expected:
+# - The budget account is created with a balance of -500.00
+# - A StartingBalance log is created with an amount of -500.00
+#
+# @name createNegativeBudgetAccount
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Negative Balance Test {{$guid}}",
+  "description": "Budget account created with a negative starting balance.",
+  "balance": -500.00
+}
+
+
+###
+# Retrieve the logs for the negative-balance budget account
+#
+# Expected:
+# - One StartingBalance log
+# - Amount is -500.00
+# - BalanceBefore is 0.00
+# - BalanceAfter is -500.00
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{createNegativeBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Validation failure: empty budget account name during update
+#
+# Expected: 400 Bad Request
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": ""
+}
+
+
+###
+# Validation failure: budget account description exceeds 500 characters during update
+#
+# Expected: 400 Bad Request
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "description": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+}
+
+
+###
+# Validation failure: budget account balance has more than two decimal places during update
+#
+# Expected: 400 Bad Request
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "balance": 5000.123
+}
+
+
+###
+# JSON conversion failure: invalid budget account status
+#
+# Expected: 400 Bad Request because the value cannot be converted into
+# a BudgetAccountStatus enum value.
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "InvalidStatus"
+}
+
+
+###
+# JSON conversion failure: numeric budget account status
+#
+# Expected: 400 Bad Request because integer enum values are disabled by
+# JsonStringEnumConverter.
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": 1
+}
+
+
+###
+# Unknown property rejection during budget account update
+#
+# Expected: 400 Bad Request
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "balance": 5000.00,
+  "unexpectedProperty": true
+}
+
+
+###
+# Retrieve a missing budget account
+#
+# Expected: 404 Not Found
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{MissingBudgetAccountId}}
+Accept: application/json
+
+
+###
+# Update a missing budget account
+#
+# Expected: 404 Not Found
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{MissingBudgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "balance": 1000.00
+}
+
+
+###
+# Delete a missing budget account
+#
+# Expected: 404 Not Found
+
+DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{MissingBudgetAccountId}}
+Accept: application/json
+
+
+###
+# Retrieve logs for a missing budget account
+#
+# Expected: 404 Not Found because the parent budget account does not exist.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{MissingBudgetAccountId}}
+Accept: application/json
+
+
+###
+# Retrieve a budget account log using a missing expense entry ID
+#
+# Expected: 404 Not Found because the expense entry does not exist.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/expense-entries/{{MissingExpenseEntryId}}
+Accept: application/json
+
+
+###
+# Delete the created budget account
+#
+# Expected:
+# - 204 No Content
+# - The budget account is deleted
+# - Its associated budget account logs are deleted through ON DELETE CASCADE
+# - The existing expense remains available
+
+DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Retrieve the deleted budget account
+#
+# Expected: 404 Not Found
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Retrieve logs for the deleted budget account
+#
+# Expected: 404 Not Found because the parent budget account no longer exists.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Retrieve the expense after deleting its associated budget account
+#
+# Expected:
+# - The expense still exists
+# - Its expense item snapshots remain available
+# - Its former budget account log has been deleted with the budget account
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpenseWithBudgetAccount.response.body.$.expenseEntry.expenseEntryId}}
+Accept: application/json
+
+
+###
+# Delete the negative-balance budget account
+#
+# Expected: 204 No Content
+
+DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createNegativeBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Create a catalog item for budget rollback and status tests
+#
+# @name createBudgetTestItem
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/items
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Budget Test Item {{$guid}}",
+  "code": "BT-{{$timestamp}}",
+  "brand": "Budget Test Brand {{$guid}}",
+  "unitPrice": 100.00
+}
+
+
+###
+# Create a budget account for status mismatch tests
+#
+# @name createStatusTestBudgetAccount
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Status Test Budget Account {{$guid}}",
+  "description": "Budget account used for status mismatch tests.",
+  "balance": 1000.00
+}
+
+
+###
+# Archive the budget account used for status mismatch tests
+#
+# Expected:
+# - 200 OK
+# - Status is Archived
+# - No Adjustment log is created because the balance is unchanged
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "Archived"
+}
+
+
+###
+# Attempt to record an expense using an archived budget account
+#
+# Expected:
+# - 409 Conflict
+# - The expense entry and expense item are rolled back
+# - No Expense budget log is created
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Archived Budget Account Expense",
+  "notes": "This expense should be rolled back.",
+  "budgetAccountId": {{createStatusTestBudgetAccount.response.body.$.budgetAccountId}},
+  "items": [
+    {
+      "itemId": {{createBudgetTestItem.response.body.$.itemId}},
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Attempt to update the balance of the archived budget account
+#
+# Archived accounts currently allow account updates according to the
+# BudgetService update rule.
+#
+# Expected:
+# - 200 OK
+# - Balance becomes 1500.00
+# - An Adjustment log is created with an amount of 500.00
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "balance": 1500.00
+}
+
+
+###
+# Settle the budget account
+#
+# Expected:
+# - 200 OK
+# - Status is Settled
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "status": "Settled"
+}
+
+
+###
+# Attempt to update a settled budget account
+#
+# Expected: 409 Conflict because only Open and Archived budget accounts
+# may currently be updated.
+
+PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "balance": 2000.00
+}
+
+
+###
+# Attempt to create an expense using a missing budget account
+#
+# Expected:
+# - 404 Not Found
+# - The expense entry and expense item are rolled back
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
+Content-Type: application/json
+Accept: application/json
+
+{
+  "title": "Missing Budget Account Expense",
+  "notes": "This expense should be rolled back.",
+  "budgetAccountId": {{MissingBudgetAccountId}},
+  "items": [
+    {
+      "itemId": {{createBudgetTestItem.response.body.$.itemId}},
+      "quantity": 1.000
+    }
+  ]
+}
+
+
+###
+# Retrieve all budget account logs
+#
+# Expected: 200 OK with the current collection of budget account logs.
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs
+Accept: application/json
+
+
+###
+# Delete the budget account used for status tests
+#
+# Expected:
+# - 204 No Content
+# - Associated logs are deleted through ON DELETE CASCADE
+
+DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Delete the catalog item used for budget tests
+
+DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/items/{{createBudgetTestItem.response.body.$.itemId}}
 Accept: application/json
