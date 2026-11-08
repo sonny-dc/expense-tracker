@@ -176,19 +176,24 @@ public sealed class ExpenseService
                 expenseItems.Add(expenseItem);
             }
 
+            BudgetExpenseResult? budgetExpenseResult = null;
+
             if (request.BudgetAccountId is int budgetAccountId)
             {
-                await _budgetService.RecordExpenseAsync(
+                budgetExpenseResult = await _budgetService.RecordExpenseAsync(
                     new BudgetExpenseInput
                     {
                         BudgetAccountId = budgetAccountId,
                         ExpenseEntryId = expenseEntry.ExpenseEntryId,
                         Amount = totalCost
                     }
-                );
+                , cancellationToken);
             }
 
-            return new ExpenseResult(expenseEntry, expenseItems);
+            return new ExpenseResult(
+                expenseEntry,
+                expenseItems,
+                budgetExpenseResult);
 
         }, cancellationToken);
     }

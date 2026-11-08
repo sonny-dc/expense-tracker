@@ -100,6 +100,9 @@ public sealed class CreateExpenseApiTests
                 2,
                 expense.ExpenseItems.Count);
 
+            Assert.Null(
+                expense.BudgetExpenseResult);
+
             Assert.NotNull(response.Headers.Location);
 
             Assert.EndsWith(

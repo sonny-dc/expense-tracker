@@ -120,6 +120,9 @@ public sealed class GetExpensesApiTests
                 2,
                 retrievedExpense.ExpenseItems.Count);
 
+            Assert.Null(
+                retrievedExpense.BudgetExpenseResult);
+
             ExpenseItem firstExpenseItem =
                 Assert.Single(
                     retrievedExpense.ExpenseItems,
@@ -169,7 +172,7 @@ public sealed class GetExpensesApiTests
         string uniqueValue = Guid.NewGuid()
             .ToString("N");
 
-        string firstTitle = 
+        string firstTitle =
             $"First Expense {uniqueValue}";
 
         string secondTitle =

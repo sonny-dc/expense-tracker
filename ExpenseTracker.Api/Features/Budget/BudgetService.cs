@@ -112,7 +112,7 @@ public sealed class BudgetService
 
     // Not called on the controller, this is used
     // by the ExpenseService to record an expense with a budget account.
-    public async Task<BudgetAccount> RecordExpenseAsync(
+    public async Task<BudgetExpenseResult> RecordExpenseAsync(
         BudgetExpenseInput input,
         CancellationToken cancellationToken = default)
     {
@@ -134,7 +134,7 @@ public sealed class BudgetService
                 updateInput,
                 cancellationToken);
 
-        await _budgetAccountLogService.CreateAsync(
+        BudgetAccountLog budgetAccountLog = await _budgetAccountLogService.CreateAsync(
             new CreateBudgetAccountLogInput
             {
                 BudgetAccountId = input.BudgetAccountId,
@@ -145,7 +145,7 @@ public sealed class BudgetService
                 LogType = BudgetAccountLogType.Expense
             }, cancellationToken);
 
-        return updatedAccount;
+        return new BudgetExpenseResult(updatedAccount, budgetAccountLog);
     }
 
     public async Task<IReadOnlyList<BudgetAccountLog>> GetLogsByBudgetAccountIdAsync(

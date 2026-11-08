@@ -26,7 +26,7 @@ public sealed class CreateExpenseWithBudgetAccountApiTests
     }
 
     [Fact]
-    public async Task CreateAsync_WithOpenBudgetAccount_ShouldDeductExpenseTotalFromBalance()
+    public async Task CreateAsync_WithOpenBudgetAccount_ShouldReturnBudgetExpenseResult()
     {
         Item item =
             await ExpenseApiTestHelper.CreateItemAsync(
@@ -52,14 +52,70 @@ public sealed class CreateExpenseWithBudgetAccountApiTests
                 250.00m,
                 expense.ExpenseEntry.TotalCost);
 
-            BudgetAccount updatedAccount =
+            Assert.NotNull(
+                expense.BudgetExpenseResult);
+
+            BudgetAccount resultAccount =
+                expense.BudgetExpenseResult.BudgetAccount;
+
+            Assert.Equal(
+                budgetAccount.BudgetAccountId,
+                resultAccount.BudgetAccountId);
+
+            Assert.Equal(
+                budgetAccount.Name,
+                resultAccount.Name);
+
+            Assert.Equal(
+                budgetAccount.Description,
+                resultAccount.Description);
+
+            Assert.Equal(
+                750.00m,
+                resultAccount.Balance);
+
+            Assert.Equal(
+                BudgetAccountStatus.Open,
+                resultAccount.Status);
+
+            BudgetAccountLog resultLog =
+                expense.BudgetExpenseResult.BudgetAccountLog;
+
+            Assert.True(
+                resultLog.BudgetAccountLogId > 0);
+
+            Assert.Equal(
+                budgetAccount.BudgetAccountId,
+                resultLog.BudgetAccountId);
+
+            Assert.Equal(
+                expense.ExpenseEntry.ExpenseEntryId,
+                resultLog.ExpenseEntryId);
+
+            Assert.Equal(
+                -250.00m,
+                resultLog.Amount);
+
+            Assert.Equal(
+                1000.00m,
+                resultLog.BalanceBefore);
+
+            Assert.Equal(
+                750.00m,
+                resultLog.BalanceAfter);
+
+            Assert.Equal(
+                BudgetAccountLogType.Expense,
+                resultLog.LogType);
+
+            BudgetAccount persistedAccount =
                 await BudgetApiTestHelper.GetBudgetAccountAsync(
                     _client,
                     budgetAccount.BudgetAccountId);
 
             Assert.Equal(
-                750.00m,
-                updatedAccount.Balance);
+                resultAccount.Balance,
+                persistedAccount.Balance);
         }
         finally
         {
@@ -75,7 +131,7 @@ public sealed class CreateExpenseWithBudgetAccountApiTests
     }
 
     [Fact]
-    public async Task CreateAsync_WithOpenBudgetAccount_ShouldCreateExpenseLog()
+    public async Task CreateAsync_WithOpenBudgetAccount_ShouldPersistReturnedExpenseActivity()
     {
         Item item =
             await ExpenseApiTestHelper.CreateItemAsync(
@@ -97,6 +153,12 @@ public sealed class CreateExpenseWithBudgetAccountApiTests
                         item.ItemId,
                         quantity: 2.000m);
 
+            Assert.NotNull(
+                expense.BudgetExpenseResult);
+
+            BudgetAccountLog returnedLog =
+                expense.BudgetExpenseResult.BudgetAccountLog;
+
             IReadOnlyList<BudgetAccountLog> logs =
                 await BudgetApiTestHelper
                     .GetLogsByBudgetAccountIdAsync(
@@ -107,7 +169,7 @@ public sealed class CreateExpenseWithBudgetAccountApiTests
                 2,
                 logs.Count);
 
-            BudgetAccountLog expenseLog =
+            BudgetAccountLog persistedLog =
                 Assert.Single(
                     logs,
                     log =>
@@ -115,24 +177,32 @@ public sealed class CreateExpenseWithBudgetAccountApiTests
                         BudgetAccountLogType.Expense);
 
             Assert.Equal(
-                budgetAccount.BudgetAccountId,
-                expenseLog.BudgetAccountId);
+                returnedLog.BudgetAccountLogId,
+                persistedLog.BudgetAccountLogId);
 
             Assert.Equal(
-                expense.ExpenseEntry.ExpenseEntryId,
-                expenseLog.ExpenseEntryId);
+                returnedLog.BudgetAccountId,
+                persistedLog.BudgetAccountId);
 
             Assert.Equal(
-                -200.00m,
-                expenseLog.Amount);
+                returnedLog.ExpenseEntryId,
+                persistedLog.ExpenseEntryId);
 
             Assert.Equal(
-                1000.00m,
-                expenseLog.BalanceBefore);
+                returnedLog.Amount,
+                persistedLog.Amount);
 
             Assert.Equal(
-                800.00m,
-                expenseLog.BalanceAfter);
+                returnedLog.BalanceBefore,
+                persistedLog.BalanceBefore);
+
+            Assert.Equal(
+                returnedLog.BalanceAfter,
+                persistedLog.BalanceAfter);
+
+            Assert.Equal(
+                returnedLog.LogType,
+                persistedLog.LogType);
         }
         finally
         {
@@ -173,6 +243,33 @@ public sealed class CreateExpenseWithBudgetAccountApiTests
             Assert.Equal(
                 600.00m,
                 expense.ExpenseEntry.TotalCost);
+
+            Assert.NotNull(
+                expense.BudgetExpenseResult);
+
+            Assert.Equal(
+                -100.00m,
+                expense.BudgetExpenseResult
+                    .BudgetAccount
+                    .Balance);
+
+            Assert.Equal(
+                -600.00m,
+                expense.BudgetExpenseResult
+                    .BudgetAccountLog
+                    .Amount);
+
+            Assert.Equal(
+                500.00m,
+                expense.BudgetExpenseResult
+                    .BudgetAccountLog
+                    .BalanceBefore);
+
+            Assert.Equal(
+                -100.00m,
+                expense.BudgetExpenseResult
+                    .BudgetAccountLog
+                    .BalanceAfter);
 
             BudgetAccount updatedAccount =
                 await BudgetApiTestHelper.GetBudgetAccountAsync(

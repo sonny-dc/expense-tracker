@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 
-using ExpenseTracker.Api.Features.Budget;
-
 namespace ExpenseTracker.Api.Features.Budget.Logs;
 
 [ApiController]

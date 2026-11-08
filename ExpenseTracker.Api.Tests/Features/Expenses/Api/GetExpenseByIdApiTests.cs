@@ -5,7 +5,10 @@ using ExpenseTracker.Api.Features.Expenses;
 using ExpenseTracker.Api.Features.Expenses.Items;
 using ExpenseTracker.Api.Features.Expenses.Items.Requests;
 using ExpenseTracker.Api.Features.Items;
+using ExpenseTracker.Api.Features.Budget.Accounts;
+
 using ExpenseTracker.Api.Tests.Features.Expenses.Helpers;
+using ExpenseTracker.Api.Tests.Features.Budget.Helpers;
 using ExpenseTracker.Api.Tests.Infrastructure;
 
 namespace ExpenseTracker.Api.Tests.Features.Expenses.Api;
@@ -32,7 +35,7 @@ public sealed class GetExpenseByIdApiTests
         string uniqueValue = Guid.NewGuid()
             .ToString("N");
 
-        string title = 
+        string title =
             $"Test Expense {uniqueValue}";
 
         string notes =
@@ -117,6 +120,9 @@ public sealed class GetExpenseByIdApiTests
             Assert.Equal(
                 200.00m,
                 expenseItem.LineTotal);
+
+            Assert.Null(
+                retrievedExpense.BudgetExpenseResult);
         }
         finally
         {
@@ -134,7 +140,7 @@ public sealed class GetExpenseByIdApiTests
                 _client,
                 unitPrice: 40.00m);
 
-        string title = 
+        string title =
             $"Historical Expense {Guid.NewGuid():N}";
 
         ExpenseResult createdExpense =
@@ -224,5 +230,73 @@ public sealed class GetExpenseByIdApiTests
         Assert.Equal(
             HttpStatusCode.NotFound,
             response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithBudgetExpense_ShouldNotReconstructImmediateBudgetResult()
+    {
+        Item item =
+            await ExpenseApiTestHelper.CreateItemAsync(
+                _client,
+                unitPrice: 100.00m);
+
+        BudgetAccount budgetAccount =
+            await BudgetApiTestHelper.CreateBudgetAccountAsync(
+                _client,
+                balance: 1000.00m);
+
+        try
+        {
+            ExpenseResult createdExpense =
+                await BudgetApiTestHelper
+                    .CreateExpenseWithBudgetAccountAsync(
+                        _client,
+                        budgetAccount.BudgetAccountId,
+                        item.ItemId,
+                        quantity: 2.000m);
+
+            Assert.NotNull(
+                createdExpense.BudgetExpenseResult);
+
+            HttpResponseMessage response =
+                await _client.GetAsync(
+                    $"/api/v1/expenses/" +
+                    $"{createdExpense.ExpenseEntry.ExpenseEntryId}",
+                    TestContext.Current.CancellationToken);
+
+            Assert.Equal(
+                HttpStatusCode.OK,
+                response.StatusCode);
+
+            ExpenseResult? retrievedExpense =
+                await response.Content.ReadFromJsonAsync<
+                    ExpenseResult>(
+                        TestContext.Current.CancellationToken);
+
+            Assert.NotNull(
+                retrievedExpense);
+
+            Assert.Equal(
+                createdExpense.ExpenseEntry.ExpenseEntryId,
+                retrievedExpense.ExpenseEntry.ExpenseEntryId);
+
+            Assert.Equal(
+                createdExpense.ExpenseEntry.TotalCost,
+                retrievedExpense.ExpenseEntry.TotalCost);
+
+            Assert.Null(
+                retrievedExpense.BudgetExpenseResult);
+        }
+        finally
+        {
+            await BudgetApiTestHelper
+                .DeleteBudgetAccountIfPresentAsync(
+                    _client,
+                    budgetAccount.BudgetAccountId);
+
+            await ExpenseApiTestHelper.DeleteItemIfPresentAsync(
+                _client,
+                item.ItemId);
+        }
     }
 }

@@ -4,6 +4,7 @@
 @MissingExpenseEntryId = 2147483647
 @MissingBudgetAccountId = 2147483647
 
+
 ###
 # Health check through an existing endpoint
 
@@ -60,12 +61,17 @@ Accept: application/json
 
 
 ###
-# Create an expense using two different items
+# Create an expense using two different items without a budget account
 #
-# Expected backend calculation:
+# Expected calculation:
 # Bond paper: 250.00 * 2.000 = 500.00
 # Ballpen:     15.50 * 3.000 =  46.50
 # Total:                         546.50
+#
+# Expected response:
+# - ExpenseEntry contains the saved expense
+# - ExpenseItems contains two historical item lines
+# - BudgetExpenseResult is null because no budget account was selected
 #
 # @name createExpense
 
@@ -96,8 +102,24 @@ Accept: application/json
 # - Title is Office Supplies
 # - Total cost is 546.50
 # - Two expense item lines are returned
+# - BudgetExpenseResult is null
+#
+# BudgetExpenseResult represents the immediate account result returned
+# when an expense is created using a budget account. It is not currently
+# reconstructed when an existing expense is retrieved.
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpense.response.body.$.expenseEntry.expenseEntryId}}
+Accept: application/json
+
+
+###
+# Retrieve account activity for an expense that did not use a budget account
+#
+# Expected:
+# - 200 OK
+# - No account activity is returned
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/expense-entries/{{createExpense.response.body.$.expenseEntry.expenseEntryId}}
 Accept: application/json
 
 
@@ -111,11 +133,14 @@ Accept: application/json
 ###
 # Create an expense containing the same item ID more than once
 #
-# The backend should normalize the two lines into one expense item:
+# The two lines should be combined into one expense item:
 # 1.250 + 2.750 = 4.000
 #
 # Expected total:
 # 250.00 * 4.000 = 1000.00
+#
+# Expected:
+# - BudgetExpenseResult is null
 #
 # @name createExpenseWithDuplicateItemIds
 
@@ -146,6 +171,7 @@ Accept: application/json
 # - One expense item line
 # - Normalized quantity is 4.000
 # - Total cost is 1000.00
+# - BudgetExpenseResult is null
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpenseWithDuplicateItemIds.response.body.$.expenseEntry.expenseEntryId}}
 Accept: application/json
@@ -154,7 +180,10 @@ Accept: application/json
 ###
 # Create an expense without notes
 #
-# Notes are optional, but title is required.
+# Notes are optional, but the title is required.
+#
+# Expected:
+# - BudgetExpenseResult is null
 #
 # @name createExpenseWithoutNotes
 
@@ -422,7 +451,11 @@ Accept: application/json
 ###
 # Create a budget account
 #
-# Returns the new budget account ID and the initial balance.
+# Expected:
+# - The account is created with an opening balance of 1000.00
+# - The account status is Open
+# - The response contains the generated BudgetAccountId
+#
 # @name createBudgetAccount
 
 POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
@@ -430,30 +463,14 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "Name": "Test Budget Account {{$guid}}",
-  "Description": "This is a test budget account created through the HTTP file.",
-  "Balance": 1000.00
+  "name": "Test Budget Account {{$guid}}",
+  "description": "This is a test budget account created through the HTTP file.",
+  "balance": 1000.00
 }
 
 
 ###
-# Create a budget account with incorrect property names
-#
-# Expected: 400 Bad Request
-
-POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
-Content-Type: application/json
-Accept: application/json
-
-{
-  "Name": "Test Budget Account {{$guid}}",
-  "Description": "This is a test budget account created through the HTTP file.",
-  "Balnce": 1000.00
-}
-
-
-###
-# Create a budget account with extra properties that don't exist in the model
+# Create a budget account with an incorrect property name
 #
 # Expected: 400 Bad Request
 
@@ -464,7 +481,23 @@ Accept: application/json
 {
   "name": "Test Budget Account {{$guid}}",
   "description": "This is a test budget account created through the HTTP file.",
-  "Balance": 1000.00,
+  "balnce": 1000.00
+}
+
+
+###
+# Create a budget account with an extra property
+#
+# Expected: 400 Bad Request
+
+POST {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Test Budget Account {{$guid}}",
+  "description": "This is a test budget account created through the HTTP file.",
+  "balance": 1000.00,
   "extraProperty": "unexpected value"
 }
 
@@ -472,16 +505,38 @@ Accept: application/json
 ###
 # Retrieve all budget accounts
 #
-# Expected: The list of budget accounts, including the one created above.
+# Expected:
+# - The list includes the account created above
+# - Accounts are ordered by name
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts
 Accept: application/json
 
 
 ###
-# Create an expense with an associated budget account
+# Create an expense paid from a budget account
 #
-# Expected: The expense
+# Expected calculation:
+# Bond paper: 250.00 * 2.000 = 500.00
+#
+# Expected account result:
+# Previous balance: 1000.00
+# Expense amount:     500.00
+# Available balance:  500.00
+#
+# Expected response:
+# - ExpenseEntry contains the saved expense with TotalCost 500.00
+# - ExpenseItems contains one historical item line
+# - BudgetExpenseResult is not null
+# - BudgetExpenseResult.BudgetAccount contains the updated account
+# - The updated account balance is 500.00
+# - BudgetExpenseResult.BudgetAccountLog contains the expense activity
+# - The activity amount is -500.00
+# - BalanceBefore is 1000.00
+# - BalanceAfter is 500.00
+# - LogType is Expense
+# - ExpenseEntryId matches the newly created expense
+#
 # @name createExpenseWithBudgetAccount
 
 POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
@@ -502,28 +557,57 @@ Accept: application/json
 
 
 ###
-# Retrieve the BudgetAccountLog associated with the expense created above
+# Retrieve the updated budget account after the expense
 #
-# Expected: The budget account log entry for the expense, including the
-# budget account ID, expense entry ID, and the amount deducted from the budget account.
+# Expected:
+# - Balance is 500.00
+# - Status remains Open
+
+GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
+Accept: application/json
+
+
+###
+# Retrieve the account activity associated with the expense
+#
+# Expected:
+# - BudgetAccountId matches the selected account
+# - ExpenseEntryId matches the created expense
+# - Amount is -500.00
+# - BalanceBefore is 1000.00
+# - BalanceAfter is 500.00
+# - LogType is Expense
+#
+# These values should match the BudgetAccountLog returned in:
+# createExpenseWithBudgetAccount.response.body.$.budgetExpenseResult
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/expense-entries/{{createExpenseWithBudgetAccount.response.body.$.expenseEntry.expenseEntryId}}
 Accept: application/json
 
+
 ###
-# Retrieve the budget account logs based on the budget account ID
+# Retrieve all activity for the created budget account
 #
-# Expected: The budget account log entry for the expense, including the
-# budget account ID, expense entry ID, and the amount deducted from the budget account.
+# Expected:
+# - One StartingBalance activity with Amount 1000.00
+# - One Expense activity with Amount -500.00
+# - The Expense activity has BalanceBefore 1000.00
+# - The Expense activity has BalanceAfter 500.00
+# - Results are ordered by LogDateTime descending
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Accept: application/json
 
 
 ###
-# Update the budget account balance to 5000
+# Change the budget account balance to 5000.00
 #
-# Expected: The updated budget account with the new balance of 5000.00.
+# Expected:
+# - The updated account balance is 5000.00
+# - One Adjustment activity is created
+# - Amount is 4500.00
+# - BalanceBefore is 500.00
+# - BalanceAfter is 5000.00
 
 PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Content-Type: application/json
@@ -535,10 +619,14 @@ Accept: application/json
 
 
 ###
-# Get the log entries for the budget account after updating the balance
+# Retrieve all budget account activity after changing the balance
 #
-# Expected: The budget account log entry for the balance update, including the
-# 'Adjustment' logType, budget account ID, the new balance, and the timestamp of the update.
+# Expected activity for the created account:
+# - StartingBalance with Amount 1000.00
+# - Expense with Amount -500.00
+# - Adjustment with Amount 4500.00
+#
+# The latest activity should appear first.
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs
 Accept: application/json
@@ -557,16 +645,10 @@ Accept: application/json
 ###
 # Retrieve the original expense after deleting the first catalog item
 #
-# The expense title and parent information should remain.
-# The bond-paper expense item should still contain:
-# - ItemNameSnapshot
-# - ItemCodeSnapshot
-# - BrandSnapshot
-# - UnitPriceSnapshot
-# - Quantity
-# - LineTotal
-#
-# Its ItemId should now be null.
+# Expected:
+# - The expense title and parent information remain
+# - The bond-paper expense item retains its historical details
+# - Its ItemId is null
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpense.response.body.$.expenseEntry.expenseEntryId}}
 Accept: application/json
@@ -580,9 +662,11 @@ Accept: application/json
 
 
 ###
-# Final retrieval of all expenses
+# Retrieve all expenses after deleting the source items
 #
-# Created expense history and titles should remain after deleting source items.
+# Expected:
+# - Expense history remains available
+# - Historical item details remain available
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
 Accept: application/json
@@ -591,7 +675,9 @@ Accept: application/json
 ###
 # Retrieve the expense summary
 #
-# Returns the total number of expenses and the total cost of all expenses.
+# Expected:
+# - ExpenseCount is the total number of recorded expenses
+# - TotalCost is the sum of all recorded expense totals
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/entries/summary
 Accept: application/json
@@ -600,8 +686,10 @@ Accept: application/json
 ###
 # Retrieve the created budget account by ID
 #
-# Expected: The created budget account with its current balance, status,
-# description, and timestamps.
+# Expected:
+# - Balance is 5000.00
+# - Status is Open
+# - Description and timestamps are returned
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Accept: application/json
@@ -610,8 +698,12 @@ Accept: application/json
 ###
 # Update the budget account name, description, and status
 #
-# Expected: The updated budget account with the new name, description,
-# and Archived status. The balance should remain unchanged.
+# Expected:
+# - Name is Updated Test Budget Account
+# - Description is Updated through the HTTP file.
+# - Status is Archived
+# - Balance remains 5000.00
+# - No additional Adjustment activity is created
 
 PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Content-Type: application/json
@@ -625,23 +717,24 @@ Accept: application/json
 
 
 ###
-# Retrieve the budget account after updating its metadata and status
+# Retrieve the budget account after updating its details and status
 #
 # Expected:
 # - Name is Updated Test Budget Account
 # - Description is Updated through the HTTP file.
 # - Status is Archived
-# - Balance remains unchanged
+# - Balance remains 5000.00
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Accept: application/json
 
 
 ###
-# Retrieve the budget account logs after updating metadata and status
+# Retrieve the account activity after updating details and status
 #
-# Expected: No additional Adjustment log should be created because the
-# balance was not changed by the previous request.
+# Expected:
+# - No additional Adjustment activity was created
+# - Existing StartingBalance, Expense, and Adjustment activities remain
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Accept: application/json
@@ -713,12 +806,13 @@ Accept: application/json
 
 
 ###
-# Create a budget account with a negative starting balance
+# Create a budget account with a negative opening balance
 #
-# Negative balances are supported by the current business rules.
+# Negative balances are supported.
+#
 # Expected:
-# - The budget account is created with a balance of -500.00
-# - A StartingBalance log is created with an amount of -500.00
+# - The account is created with a balance of -500.00
+# - One StartingBalance activity has an amount of -500.00
 #
 # @name createNegativeBudgetAccount
 
@@ -728,16 +822,16 @@ Accept: application/json
 
 {
   "name": "Negative Balance Test {{$guid}}",
-  "description": "Budget account created with a negative starting balance.",
+  "description": "Budget account created with a negative opening balance.",
   "balance": -500.00
 }
 
 
 ###
-# Retrieve the logs for the negative-balance budget account
+# Retrieve the activity for the negative-balance account
 #
 # Expected:
-# - One StartingBalance log
+# - One StartingBalance activity
 # - Amount is -500.00
 # - BalanceBefore is 0.00
 # - BalanceAfter is -500.00
@@ -791,8 +885,7 @@ Accept: application/json
 ###
 # JSON conversion failure: invalid budget account status
 #
-# Expected: 400 Bad Request because the value cannot be converted into
-# a BudgetAccountStatus enum value.
+# Expected: 400 Bad Request
 
 PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Content-Type: application/json
@@ -806,8 +899,7 @@ Accept: application/json
 ###
 # JSON conversion failure: numeric budget account status
 #
-# Expected: 400 Bad Request because integer enum values are disabled by
-# JsonStringEnumConverter.
+# Expected: 400 Bad Request because numeric enum values are disabled
 
 PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Content-Type: application/json
@@ -866,18 +958,18 @@ Accept: application/json
 
 
 ###
-# Retrieve logs for a missing budget account
+# Retrieve activity for a missing budget account
 #
-# Expected: 404 Not Found because the parent budget account does not exist.
+# Expected: 404 Not Found because the account does not exist
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{MissingBudgetAccountId}}
 Accept: application/json
 
 
 ###
-# Retrieve a budget account log using a missing expense entry ID
+# Retrieve account activity using a missing expense entry ID
 #
-# Expected: 404 Not Found because the expense entry does not exist.
+# Expected: 404 Not Found because the expense entry does not exist
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/expense-entries/{{MissingExpenseEntryId}}
 Accept: application/json
@@ -888,9 +980,9 @@ Accept: application/json
 #
 # Expected:
 # - 204 No Content
-# - The budget account is deleted
-# - Its associated budget account logs are deleted through ON DELETE CASCADE
-# - The existing expense remains available
+# - The account is deleted
+# - Its activity history is deleted
+# - Existing expenses remain available
 
 DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Accept: application/json
@@ -906,9 +998,9 @@ Accept: application/json
 
 
 ###
-# Retrieve logs for the deleted budget account
+# Retrieve activity for the deleted budget account
 #
-# Expected: 404 Not Found because the parent budget account no longer exists.
+# Expected: 404 Not Found because the account no longer exists
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs/accounts/{{createBudgetAccount.response.body.$.budgetAccountId}}
 Accept: application/json
@@ -919,8 +1011,13 @@ Accept: application/json
 #
 # Expected:
 # - The expense still exists
-# - Its expense item snapshots remain available
-# - Its former budget account log has been deleted with the budget account
+# - Its historical item details remain available
+# - BudgetExpenseResult is null on the retrieved expense
+# - The former account activity is no longer available
+#
+# BudgetExpenseResult is returned by the expense-creation operation so the
+# client can show the immediate account result. It is not reconstructed by
+# the current expense retrieval workflow.
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses/{{createExpenseWithBudgetAccount.response.body.$.expenseEntry.expenseEntryId}}
 Accept: application/json
@@ -974,7 +1071,7 @@ Accept: application/json
 # Expected:
 # - 200 OK
 # - Status is Archived
-# - No Adjustment log is created because the balance is unchanged
+# - No Adjustment activity is created because the balance is unchanged
 
 PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
 Content-Type: application/json
@@ -991,7 +1088,7 @@ Accept: application/json
 # Expected:
 # - 409 Conflict
 # - The expense entry and expense item are rolled back
-# - No Expense budget log is created
+# - No Expense activity is created
 
 POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
 Content-Type: application/json
@@ -1011,15 +1108,16 @@ Accept: application/json
 
 
 ###
-# Attempt to update the balance of the archived budget account
+# Change the balance of the archived budget account
 #
-# Archived accounts currently allow account updates according to the
-# BudgetService update rule.
+# Archived accounts currently allow updates.
 #
 # Expected:
 # - 200 OK
 # - Balance becomes 1500.00
-# - An Adjustment log is created with an amount of 500.00
+# - One Adjustment activity has Amount 500.00
+# - BalanceBefore is 1000.00
+# - BalanceAfter is 1500.00
 
 PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
 Content-Type: application/json
@@ -1049,8 +1147,10 @@ Accept: application/json
 ###
 # Attempt to update a settled budget account
 #
-# Expected: 409 Conflict because only Open and Archived budget accounts
-# may currently be updated.
+# Expected:
+# - 409 Conflict
+# - The balance remains 1500.00
+# - No Adjustment activity is created
 
 PATCH {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
 Content-Type: application/json
@@ -1067,6 +1167,7 @@ Accept: application/json
 # Expected:
 # - 404 Not Found
 # - The expense entry and expense item are rolled back
+# - No account activity is created
 
 POST {{ExpenseTrackerApi_HostAddress}}/api/v1/expenses
 Content-Type: application/json
@@ -1086,9 +1187,9 @@ Accept: application/json
 
 
 ###
-# Retrieve all budget account logs
+# Retrieve all budget account activity
 #
-# Expected: 200 OK with the current collection of budget account logs.
+# Expected: 200 OK with the current activity collection
 
 GET {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/logs
 Accept: application/json
@@ -1099,7 +1200,7 @@ Accept: application/json
 #
 # Expected:
 # - 204 No Content
-# - Associated logs are deleted through ON DELETE CASCADE
+# - Its activity history is deleted
 
 DELETE {{ExpenseTrackerApi_HostAddress}}/api/v1/budget/accounts/{{createStatusTestBudgetAccount.response.body.$.budgetAccountId}}
 Accept: application/json
