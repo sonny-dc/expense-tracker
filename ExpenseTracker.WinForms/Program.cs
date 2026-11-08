@@ -3,6 +3,8 @@ using Microsoft.Extensions.Hosting;
 
 using ExpenseTracker.WinForms.Features.Items.Api;
 using ExpenseTracker.WinForms.Features.Expenses.Api;
+using ExpenseTracker.WinForms.Features.Budget.Accounts.Api;
+using ExpenseTracker.WinForms.Features.Budget.Logs.Api;
 
 using ExpenseTracker.WinForms.Features.Expenses.Views;
 using ExpenseTracker.WinForms.Features.Home.Views;
@@ -52,6 +54,8 @@ internal static class Program
 
         builder.Services.AddSingleton<ItemsApiClient>();
         builder.Services.AddSingleton<ExpensesApiClient>();
+        builder.Services.AddSingleton<BudgetAccountsApiClient>();
+        builder.Services.AddSingleton<BudgetAccountLogsApiClient>();
 
         builder.Services.AddSingleton<DisplaySettingsService>();
         builder.Services.AddSingleton<DisplayFormatter>();

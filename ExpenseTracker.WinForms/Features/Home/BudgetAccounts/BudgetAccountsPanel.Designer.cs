@@ -191,7 +191,7 @@ partial class BudgetAccountsPanel
         descriptionLabel.TabIndex = 1;
 
         descriptionLabel.Text =
-            "Available budgets will be displayed in this area.";
+            "Current balances and account status.";
 
         //
         // budgetAccountsFlowLayoutPanel
@@ -286,7 +286,7 @@ partial class BudgetAccountsPanel
         emptyBudgetTitleLabel.TabIndex = 0;
 
         emptyBudgetTitleLabel.Text =
-            "No budgets yet";
+            "No budget accounts yet";
 
         //
         // emptyBudgetDescriptionLabel
@@ -295,9 +295,6 @@ partial class BudgetAccountsPanel
             AnchorStyles.Top |
             AnchorStyles.Left |
             AnchorStyles.Right;
-
-        emptyBudgetDescriptionLabel.AutoEllipsis =
-            true;
 
         emptyBudgetDescriptionLabel.ForeColor =
             Color.DimGray;
@@ -314,7 +311,7 @@ partial class BudgetAccountsPanel
         emptyBudgetDescriptionLabel.TabIndex = 1;
 
         emptyBudgetDescriptionLabel.Text =
-            "Budget accounts will appear here after budget tracking is added.";
+            "Create a budget account to track available funds and expense deductions.";
 
         //
         // BudgetAccountsPanel

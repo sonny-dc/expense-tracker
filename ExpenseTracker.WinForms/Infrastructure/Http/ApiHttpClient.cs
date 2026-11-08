@@ -1,3 +1,6 @@
+using System.Text.Json;
+using System.Text.Json.Serialization;
+
 using Microsoft.Extensions.DependencyInjection;
 
 namespace ExpenseTracker.WinForms.Infrastructure.Http;
@@ -6,12 +9,14 @@ public static class ApiHttpClient
 {
     private const string Name = "ExpenseTrackerApi";
 
+    public static JsonSerializerOptions JsonOptions { get; } = CreateJsonOptions();
+
     public static IServiceCollection AddApiHttpClient(
         this IServiceCollection services,
         Uri baseAddress)
     {
         services.AddHttpClient(
-            Name, 
+            Name,
             httpClient =>
             {
                 httpClient.BaseAddress = baseAddress;
@@ -25,6 +30,18 @@ public static class ApiHttpClient
         this IHttpClientFactory httpClientFactory)
     {
         return httpClientFactory.CreateClient(Name);
+    }
+
+    private static JsonSerializerOptions CreateJsonOptions()
+    {
+        var options = new JsonSerializerOptions(
+            JsonSerializerDefaults.Web);
+
+        options.Converters.Add(
+            new JsonStringEnumConverter(
+                allowIntegerValues: false));
+
+        return options;
     }
 
 }

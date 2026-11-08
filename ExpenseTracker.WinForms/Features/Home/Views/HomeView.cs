@@ -1,10 +1,15 @@
 ﻿using System.Text.Json;
 
+using ExpenseTracker.WinForms.Features.Budget.Accounts.Api;
+using ExpenseTracker.WinForms.Features.Budget.Accounts.Models;
+
 using ExpenseTracker.WinForms.Features.Expenses.Api;
 using ExpenseTracker.WinForms.Features.Expenses.Models;
+
 using ExpenseTracker.WinForms.Features.Home.BudgetAccounts;
 using ExpenseTracker.WinForms.Features.Home.ExpenseSummary;
 using ExpenseTracker.WinForms.Features.Home.RecentExpenses;
+
 using ExpenseTracker.WinForms.Features.Settings.Services;
 
 using ExpenseTracker.WinForms.Infrastructure.Dialogs;
@@ -15,17 +20,28 @@ namespace ExpenseTracker.WinForms.Features.Home.Views;
 public partial class HomeView : UserControl
 {
     private readonly ExpensesApiClient _expensesApiClient;
-    private readonly DisplaySettingsService _displaySettingsService;
 
-    private readonly ExpenseSummaryPanel _expenseSummaryPanel;
-    private readonly RecentExpensesPanel _recentExpensesPanel;
-    private readonly BudgetAccountsPanel _budgetAccountsPanel;
+    private readonly BudgetAccountsApiClient
+        _budgetAccountsApiClient;
+
+    private readonly DisplaySettingsService
+        _displaySettingsService;
+
+    private readonly ExpenseSummaryPanel
+        _expenseSummaryPanel;
+
+    private readonly RecentExpensesPanel
+        _recentExpensesPanel;
+
+    private readonly BudgetAccountsPanel
+        _budgetAccountsPanel;
 
     private bool _hasLoaded;
     private bool _isLoading;
 
     public HomeView(
         ExpensesApiClient expensesApiClient,
+        BudgetAccountsApiClient budgetAccountsApiClient,
         DisplaySettingsService displaySettingsService,
         ExpenseSummaryPanel expenseSummaryPanel,
         RecentExpensesPanel recentExpensesPanel,
@@ -33,12 +49,23 @@ public partial class HomeView : UserControl
     {
         InitializeComponent();
 
-        _expensesApiClient = expensesApiClient;
-        _displaySettingsService = displaySettingsService;
+        _expensesApiClient =
+            expensesApiClient;
 
-        _expenseSummaryPanel = expenseSummaryPanel;
-        _recentExpensesPanel = recentExpensesPanel;
-        _budgetAccountsPanel = budgetAccountsPanel;
+        _budgetAccountsApiClient =
+            budgetAccountsApiClient;
+
+        _displaySettingsService =
+            displaySettingsService;
+
+        _expenseSummaryPanel =
+            expenseSummaryPanel;
+
+        _recentExpensesPanel =
+            recentExpensesPanel;
+
+        _budgetAccountsPanel =
+            budgetAccountsPanel;
 
         AddSection(
             expenseSummaryHostPanel,
@@ -52,7 +79,8 @@ public partial class HomeView : UserControl
             budgetAccountsHostPanel,
             _budgetAccountsPanel);
 
-        Load += HomeView_Load;
+        Load +=
+            HomeView_Load;
 
         refreshButton.Click +=
             refreshButton_Click;
@@ -91,13 +119,17 @@ public partial class HomeView : UserControl
 
         try
         {
-            SetLoadingState(isLoading: true);
+            SetLoadingState(
+                isLoading: true);
 
             ExpenseEntrySummary expenseSummary =
                 await _expensesApiClient.GetSummaryAsync();
 
             IReadOnlyList<ExpenseResult> expenses =
                 await _expensesApiClient.GetAllAsync();
+
+            IReadOnlyList<BudgetAccount> budgetAccounts =
+                await _budgetAccountsApiClient.GetAllAsync();
 
             IReadOnlyList<ExpenseResult> recentExpenses =
                 expenses
@@ -109,6 +141,9 @@ public partial class HomeView : UserControl
 
             _recentExpensesPanel.DisplayExpenses(
                 recentExpenses);
+
+            _budgetAccountsPanel.DisplayAccounts(
+                budgetAccounts);
 
             statusLabel.Text =
                 "Dashboard is up to date.";
@@ -134,7 +169,8 @@ public partial class HomeView : UserControl
             MessageBox.Show(
                 this,
                 "The dashboard could not be loaded. " +
-                "Make sure the ExpenseTracker service is running, then try again.",
+                "Make sure the ExpenseTracker service is running, " +
+                "then try again.",
                 "Connection Error",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -149,7 +185,8 @@ public partial class HomeView : UserControl
             MessageBox.Show(
                 this,
                 "The dashboard information could not be read. " +
-                "The application components may not be using matching data contracts.",
+                "The application components may not be using " +
+                "matching data contracts.",
                 "Response Error",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -163,21 +200,26 @@ public partial class HomeView : UserControl
 
             MessageBox.Show(
                 this,
-                "Loading the dashboard took too long. Please try again.",
+                "Loading the dashboard took too long. " +
+                "Please try again.",
                 "Request Timeout",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
         }
         finally
         {
-            SetLoadingState(isLoading: false);
+            SetLoadingState(
+                isLoading: false);
         }
     }
 
     private void DisplayUnavailable()
     {
         _expenseSummaryPanel.DisplayUnavailable();
+
         _recentExpensesPanel.DisplayUnavailable();
+
+        _budgetAccountsPanel.DisplayUnavailable();
     }
 
     private void displaySettingsService_SettingsChanged(
@@ -185,7 +227,9 @@ public partial class HomeView : UserControl
         EventArgs e)
     {
         _expenseSummaryPanel.RefreshFormatting();
+
         _recentExpensesPanel.RefreshFormatting();
+
         _budgetAccountsPanel.RefreshFormatting();
     }
 

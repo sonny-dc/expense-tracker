@@ -4,5 +4,6 @@ public sealed class CreateExpenseRequest
 {
     public string Title { get; set; } = string.Empty;
     public string? Notes { get; set; }
+    public int? BudgetAccountId { get; set; }
     public IReadOnlyList<CreateExpenseItemRequest> Items { get; set; } = [];
 }
